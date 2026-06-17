@@ -323,6 +323,7 @@ class WindowManager {
         maximizable: false,
         closable: false,
         hasShadow: true,
+        focusable: true,
         ...(process.platform === 'darwin' && {
           titleBarStyle: 'hiddenInset',
           trafficLightPosition: { x: -100, y: -100 },
@@ -982,7 +983,7 @@ class WindowManager {
     }
 
     this.windows.forEach((window, type) => {
-      if (type !== 'llmResponse') { // Don't show LLM response unless it has content
+      if (type !== 'llmResponse' && type !== 'settings' && type !== 'main') { // Don't show LLM response, settings, or main overlay
         this.showOnCurrentDesktop(window);
       }
     });
@@ -1277,6 +1278,17 @@ class WindowManager {
     const settingsWindow = this.windows.get('settings');
     if (settingsWindow) {
       settingsWindow.hide();
+    }
+  }
+
+  toggleSettings() {
+    const settingsWindow = this.windows.get('settings');
+    if (settingsWindow) {
+      if (settingsWindow.isVisible()) {
+        this.hideSettings();
+      } else {
+        this.showSettings();
+      }
     }
   }
 

@@ -75,29 +75,7 @@
         background: rgba(255, 255, 255, 0.22);
         color: #fff;
       }
-      .recording-indicator {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #ff4757;
-        animation: pulse 2s infinite;
-        display: none;
-        box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-      }
-      @keyframes pulse {
-        0% {
-          opacity: 1;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 0.7;
-          transform: scale(1.1);
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
+      /* Speech indicators removed */
       .chat-messages {
         flex: 1;
         padding: 20px;
@@ -119,25 +97,7 @@
         /* Removed all height restrictions */
         position: relative;
       }
-      .message.transcription {
-        background: rgba(76, 175, 80, 0.15);
-        animation: fadeInSlide 0.1s ease-out;
-        position: relative;
-      }
-
-      .message.transcription::before {
-        position: absolute;
-        left: -8px;
-        top: 8px;
-        font-size: 12px;
-        color: white;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
+      /* Transcription removed */
 
       @keyframes fadeInSlide {
         from {
@@ -537,141 +497,16 @@
       }
 
       /* Minimalist Listening Animation */
-      .listening-indicator {
-        display: none;
-        position: fixed;
-        top: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(203, 203, 203, 0.3);
-        border-radius: 20px;
-        padding: 8px 16px;
-        z-index: 1000;
-        pointer-events: none;
-      }
+      /* Listening indicator removed */
 
-      .listening-indicator.active {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        animation: fadeInUp 0.3s ease-out;
-      }
-
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateX(-50%) translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-      }
-
-      .listening-wave {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-      }
-
-      .wave-bar {
-        width: 2px;
-        background: #4caf50;
-        border-radius: 1px;
-        animation: waveAnimation 1.2s infinite ease-in-out;
-      }
-
-      .wave-bar:nth-child(1) {
-        height: 8px;
-        animation-delay: 0s;
-      }
-      .wave-bar:nth-child(2) {
-        height: 12px;
-        animation-delay: 0.15s;
-      }
-      .wave-bar:nth-child(3) {
-        height: 16px;
-        animation-delay: 0.3s;
-      }
-      .wave-bar:nth-child(4) {
-        height: 12px;
-        animation-delay: 0.45s;
-      }
-      .wave-bar:nth-child(5) {
-        height: 8px;
-        animation-delay: 0.6s;
-      }
-
-      @keyframes waveAnimation {
-        0%, 100% {
-          transform: scaleY(0.3);
-          opacity: 0.6;
-        }
-        50% {
-          transform: scaleY(1);
-          opacity: 1;
-        }
-      }
-
-      .listening-text {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-      }
-
-      .listening-duration {
-        color: rgba(76, 175, 80, 0.8);
-        font-size: 10px;
-        font-family: monospace;
-        margin-left: 4px;
-      }
-
-      /* Interim text overlay */
-      .interim-overlay {
-        position: fixed;
-        bottom: 80px;
-        left: 20px;
-        right: 20px;
-        background: rgba(0, 0, 0, 0.028);
-        backdrop-filter: blur(15px);
-        border: 1px solid rgba(76, 175, 80, 0.3);
-        border-radius: 8px;
-        padding: 12px;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 12px;
-        font-style: italic;
-        z-index: 999;
-        pointer-events: none;
-        display: none;
-        animation: slideUpFade 0.3s ease-out;
-      }
-
-      .interim-overlay.active {
-        display: block;
-      }
-
-      @keyframes slideUpFade {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+      /* Speech UI removed */
     </style>
   </head>
   <body>
     <div class="chat-container" id="chatContainer">
       <div class="chat-header">
         <div class="header-title">
-          <i class="fas fa-microphone"></i>
-          Live Transcription & Chat
-          <div class="recording-indicator" id="recordingIndicator"></div>
+          Chat & AI Response
         </div>
         <div class="header-actions">
           <button class="icon-button" id="clearHistoryBtn" title="Clear chat history">
@@ -679,9 +514,6 @@
           </button>
         </div>
       </div>
-
-      <!-- Interim Text Overlay -->
-      <div class="interim-overlay" id="interimOverlay"></div>
 
       <div class="chat-messages" id="chatMessages"></div>
 
@@ -693,9 +525,6 @@
             id="messageInput"
             rows="1"
           ></textarea>
-          <button class="mic-button" id="micButton">
-            <i class="fas fa-microphone"></i>
-          </button>
           <button class="send-button" id="sendButton">
             <i class="fas fa-paper-plane"></i>
           </button>
@@ -711,25 +540,20 @@
       try { if (window.Prism && Prism.plugins && Prism.plugins.autoloader) { Prism.plugins.autoloader.languages_path = '../../../../node_modules/prismjs/components/'; } } catch (_) {}
     </script>
     <script>
-      // Use electronAPI from preload script instead of direct require
-      const whysperAPI = window.electronAPI;
+      // Use emptyAPI from preload script
+      const whysperAPI = window.emptyAPI;
 
       const chatMessages = document.getElementById('chatMessages');
-      const recordingIndicator = document.getElementById('recordingIndicator');
       const messageInput = document.getElementById('messageInput');
       const sendButton = document.getElementById('sendButton');
-      const micButton = document.getElementById('micButton');
       const chatContainer = document.getElementById('chatContainer');
-      const listeningIndicator = document.getElementById('listeningIndicator');
-      const listeningDuration = document.getElementById('listeningDuration');
-      const interimOverlay = document.getElementById('interimOverlay');
       const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
       let isRecording = false;
       let isInteractive = true;
-      let listeningStartTime = null;
-      let listeningTimer = null;
-      let speechAvailable = false;
+      // let listeningStartTime = null;
+      // let listeningTimer = null;
+      // let speechAvailable = false;
 
       // Chat persistence and deduplication
       const CHAT_HISTORY_KEY = 'opencluely_chat_history_v1';
@@ -790,31 +614,7 @@
         if (chatMessages) chatMessages.innerHTML = '';
       }
 
-      function applyMicVisibility() {
-        if (micButton) {
-          micButton.style.display = speechAvailable ? '' : 'none';
-        }
-      }
-      
-      async function initSpeechAvailability() {
-        try {
-          if (window.electronAPI && window.electronAPI.getSpeechAvailability) {
-            speechAvailable = await window.electronAPI.getSpeechAvailability();
-            applyMicVisibility();
-          }
-        } catch (e) {
-          speechAvailable = false;
-          applyMicVisibility();
-        }
-      }
-      
-      // Listen for availability changes
-      if (whysperAPI && whysperAPI.onSpeechAvailability) {
-        whysperAPI.onSpeechAvailability((event, data) => {
-          speechAvailable = !!(data && data.available);
-          applyMicVisibility();
-        });
-      }
+      // Speech initialization removed - chat only mode
       
       // Also capture generic LLM responses (from OCR/screenshot flows)
       if (whysperAPI && whysperAPI.onLlmResponse) {
@@ -833,9 +633,8 @@
         });
       }
 
-      // Initialize availability and history
+      // Initialize history
       loadHistory();
-      initSpeechAvailability();
 
       // Basic message function with markdown support for assistant messages
       function addMessage(text, type = 'user', skipPersist = false) {
@@ -924,97 +723,7 @@
       }
 
       // Minimalist Listening Animation Functions
-      function showListeningAnimation() {
-        if (listeningIndicator) {
-          listeningIndicator.classList.add('active');
-
-          // Start timer
-          listeningStartTime = Date.now();
-          listeningTimer = setInterval(() => {
-            if (listeningStartTime && listeningDuration) {
-              const elapsed = Math.floor((Date.now() - listeningStartTime) / 1000);
-              listeningDuration.textContent = `${elapsed}s`;
-            }
-          }, 1000);
-        }
-      }
-
-      function hideListeningAnimation() {
-        if (listeningIndicator) {
-          listeningIndicator.classList.remove('active');
-        }
-
-        // Hide interim overlay
-        if (interimOverlay) {
-          interimOverlay.classList.remove('active');
-        }
-
-        // Clear timer
-        if (listeningTimer) {
-          clearInterval(listeningTimer);
-          listeningTimer = null;
-        }
-
-        listeningStartTime = null;
-      }
-
-      function showInterimText(text) {
-        if (!interimOverlay) return;
-
-        if (text && text.trim()) {
-          interimOverlay.textContent = text;
-          interimOverlay.classList.add('active');
-        } else {
-          interimOverlay.classList.remove('active');
-        }
-      }
-
-      // Recording Event Handlers
-      function handleRecordingStarted() {
-        isRecording = true;
-
-        if (recordingIndicator) {
-          recordingIndicator.style.display = 'block';
-        }
-        if (micButton) {
-          micButton.classList.add('recording');
-        }
-
-        showListeningAnimation();
-      }
-
-      function handleRecordingStopped() {
-        isRecording = false;
-
-        if (recordingIndicator) {
-          recordingIndicator.style.display = 'none';
-        }
-        if (micButton) {
-          micButton.classList.remove('recording');
-        }
-
-        hideListeningAnimation();
-        addMessage('Stopped Listening', 'system');
-      }
-
-      function handleTranscription(text) {
-        if (text && typeof text === 'string' && text.trim().length > 0) {
-          // Hide listening animation first
-          hideListeningAnimation();
-
-          // Show transcribed text with slight delay for smooth transition
-          setTimeout(() => {
-            addMessage(text.trim(), 'transcription');
-            
-            // Show thinking indicator after transcription
-            setTimeout(() => {
-              showThinkingIndicator();
-            }, 300);
-          }, 200);
-        } else {
-          console.warn('Invalid or empty transcription text - ignoring:', text);
-        }
-      }
+      // Speech-related functions removed - chat only mode
 
       // Helpers to capture AI response into chat (text + snippets)
       function extractCodeBlocks(text) {
@@ -1045,8 +754,8 @@
           e.stopPropagation();
           try {
             let ok = false;
-            if (window.electronAPI && typeof window.electronAPI.copyToClipboard === 'function') {
-              ok = await window.electronAPI.copyToClipboard(codeText);
+            if (window.emptyAPI && typeof window.emptyAPI.copyToClipboard === 'function') {
+              ok = await window.emptyAPI.copyToClipboard(codeText);
             }
             if (!ok) {
               if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1138,56 +847,28 @@
         blocks.forEach(b => addCodeSnippet(b.language, b.code));
       }
 
-      // Basic IPC Event Listeners - simplified
-      
-      // Listen for transcription events
+      // Basic IPC Event Listeners
       if (whysperAPI) {
-        whysperAPI.onTranscriptionReceived((event, data) => {
-          if (data && data.text) {
-            handleTranscription(data.text);
-          } else {
-            console.warn('Invalid transcription data received:', data);
-          }
+        // Listen for capture started
+        whysperAPI.receive('capture-started', (data) => {
+          console.log('[CHAT] Capture started, showing loading indicator');
+          showThinkingIndicator();
+          addMessage('📷 Analyzing screenshot...', 'system');
         });
 
-        whysperAPI.onInterimTranscription((event, data) => {
-          if (data && data.text) {
-            showInterimText(data.text);
-          }
-        });
-
-        // Listen for speech status
-        whysperAPI.onSpeechStatus((event, data) => {
-          if (data && data.status) {
-            addMessage(data.status, 'system');
-
-            if (data.status.includes('started') || data.status.includes('Recording')) {
-              handleRecordingStarted();
-            } else if (data.status.includes('stopped') || data.status.includes('ended')) {
-              handleRecordingStopped();
-            }
-          }
-        });
-
-        // Listen for speech errors
-        whysperAPI.onSpeechError((event, data) => {
-          if (data && data.error) {
-            addMessage(`Error in recognizing speech`, 'error');
-            handleRecordingStopped();
-          }
-        });
-
-        // Listen for other events
-        whysperAPI.onRecordingStarted(() => {
-          handleRecordingStarted();
-        });
-
-        whysperAPI.onRecordingStopped(() => {
-          handleRecordingStopped();
-        });
-
+        // Listen for session cleared
         whysperAPI.onSessionCleared(() => {
           addMessage('Session memory has been cleared', 'system');
+        });
+
+        // Listen for interaction mode changes
+        whysperAPI.onInteractionModeChanged((event, interactive) => {
+          isInteractive = interactive;
+          if (interactive) {
+            chatContainer.classList.remove('non-interactive');
+          } else {
+            chatContainer.classList.add('non-interactive');
+          }
         });
 
         // Replace transcription LLM handler to store text + snippets
@@ -1204,45 +885,18 @@
         clearHistoryBtn.addEventListener('click', () => clearChatHistory());
       }
 
-      if (micButton) {
-        micButton.addEventListener('click', async () => {
-          if (!isInteractive) {
-            addMessage('Window is in non-interactive mode. Press Alt+A to enable interaction.', 'error');
-            return;
-          }
-          if (!speechAvailable) {
-            addMessage('Speech recognition is not configured.', 'system');
-            return;
-          }
-
-          try {
-            if (isRecording) {
-              if (whysperAPI) {
-                const result = await whysperAPI.stopSpeechRecognition();
-              }
-            } else {
-              if (whysperAPI) {
-                const result = await whysperAPI.startSpeechRecognition();
-              }
-            }
-          } catch (error) {
-            addMessage("Error in recognizing speech", 'error');
-          }
-        });
-      }
-
       if (sendButton) {
         sendButton.addEventListener('click', async () => {
           const text = messageInput.value.trim();
           if (text) {
             addMessage(text, 'user');
             messageInput.value = '';
-            
+
             // Show thinking indicator after user message
             setTimeout(() => {
               showThinkingIndicator();
             }, 300);
-            
+
             // Send to main process for session memory storage and LLM processing
             try {
               if (whysperAPI && whysperAPI.sendChatMessage) {
@@ -1287,22 +941,13 @@
               }
             }
           }
-          // If Shift+Enter, allow default to insert newline
         });
       }
 
-      // Global keyboard shortcuts
-      document.addEventListener('keydown', (e) => {
-        if (e.altKey && e.key === 'r') {
-          e.preventDefault();
-          if (!isInteractive || !speechAvailable) return;
-          micButton && micButton.click();
-        }
-      });
-
-      // Initialize
+      // Initialize chat
+      loadHistory();
       if (!chatHistory || chatHistory.length === 0) {
-        addMessage('Recording in Progress. press Alt+R to stop recording.', 'system');
+        addMessage('Chat window ready. Type your message and press Enter!', 'system');
       }
     </script>
   </body>

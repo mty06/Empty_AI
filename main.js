@@ -5,6 +5,11 @@ const logger = require("./src/core/logger").createServiceLogger("MAIN");
 const config = require("./src/core/config");
 const { promptLoader } = require("./src/utils/prompt-loader");
 
+// Auto reload on file changes during development
+try {
+  require('electron-reloader')(module, { debug: true });
+} catch (_) { }
+
 // Keep Chromium network noise out of the terminal; app-level logs still go through Winston.
 app.commandLine.appendSwitch("log-level", "3");
 app.commandLine.appendSwitch("disable-background-networking");
@@ -15,7 +20,6 @@ app.commandLine.appendSwitch("no-pings");
 // Services
 // Screen capture (image-based)
 const captureService = require("./src/services/capture.service");
-const speechService = require("./src/services/speech.service");
 const llmService = require("./src/services/llm.service");
 
 // Managers
@@ -26,9 +30,7 @@ class ApplicationController {
   constructor() {
     this.isReady = false;
     this.activeSkill = "general";
-  // Default to C++ so language is enforced from first run
-  this.codingLanguage = "cpp";
-    this.speechAvailable = false;
+    this.codingLanguage = "cpp";
 
     // Window configurations for reference
     this.windowConfigs = {
@@ -136,11 +138,19 @@ class ApplicationController {
       // Initialize default stealth mode with terminal icon
       this.updateAppIcon("terminal");
 
-      this.isReady = true;
-
+      // Hide main window overlay - keep capture/language functionality but hide the UI
       const mainWindow = windowManager.getWindow("main");
       if (mainWindow) {
-        logger.info("Main window created and visible", {
+        mainWindow.hide();
+      }
+
+      // Show settings window at startup
+      windowManager.showSettings();
+
+      this.isReady = true;
+
+      if (mainWindow) {
+        logger.info("Main window created but hidden", {
           isVisible: mainWindow.isVisible(),
           title: mainWindow.getTitle(),
           size: mainWindow.getSize()
@@ -189,7 +199,7 @@ class ApplicationController {
   setupPermissions() {
     session.defaultSession.setPermissionRequestHandler(
       (webContents, permission, callback) => {
-        const allowedPermissions = ["microphone", "camera", "display-capture"];
+        const allowedPermissions = ["camera", "display-capture"];
         const granted = allowedPermissions.includes(permission);
 
         logger.debug("Permission request", { permission, granted });
@@ -205,7 +215,7 @@ class ApplicationController {
       "CommandOrControl+Shift+I": () => windowManager.toggleInteraction(),
       "CommandOrControl+Shift+C": () => windowManager.switchToWindow("chat"),
       "CommandOrControl+Shift+\\": () => this.clearSessionMemory(),
-      "CommandOrControl+,": () => windowManager.showSettings(),
+      "CommandOrControl+,": () => windowManager.toggleSettings(),
       "Alt+A": () => windowManager.toggleInteraction(),
       "Alt+R": () => this.toggleSpeechRecognition(),
       "CommandOrControl+Shift+T": () => windowManager.forceAlwaysOnTopForAllWindows(),
@@ -227,66 +237,7 @@ class ApplicationController {
   }
 
   setupServiceEventHandlers() {
-    speechService.on("recording-started", () => {
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("recording-started");
-      });
-    });
-
-    speechService.on("recording-stopped", () => {
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("recording-stopped");
-      });
-    });
-
-    speechService.on("transcription", (text) => {      
-      // Add transcription to session memory
-      sessionManager.addUserInput(text, 'speech');
-      
-      const windows = BrowserWindow.getAllWindows();
-      
-      windows.forEach((window) => {
-        window.webContents.send("transcription-received", { text });
-      });
-      
-      // Automatically process transcription with LLM for intelligent response
-      setTimeout(async () => {
-        try {
-          const sessionHistory = sessionManager.getOptimizedHistory();
-          await this.processTranscriptionWithLLM(text, sessionHistory);
-        } catch (error) {
-          logger.error("Failed to process transcription with LLM", {
-            error: error.message,
-            text: text.substring(0, 100)
-          });
-        }
-      }, 500);
-    });
-
-    speechService.on("interim-transcription", (text) => {
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("interim-transcription", { text });
-      });
-    });
-
-    speechService.on("status", (status) => {
-      this.speechAvailable = speechService.isAvailable ? speechService.isAvailable() : false;
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("speech-status", { status, available: this.speechAvailable });
-      });
-      // Also broadcast availability specifically
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("speech-availability", { available: this.speechAvailable });
-      });
-    });
-
-    speechService.on("error", (error) => {
-      // In error, still compute availability
-      this.speechAvailable = speechService.isAvailable ? speechService.isAvailable() : false;
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send("speech-error", { error, available: this.speechAvailable });
-      });
-    });
+    // Speech recognition removed - keeping only chat and screenshot
   }
 
   setupIPCHandlers() {
@@ -306,28 +257,7 @@ class ApplicationController {
       }
     });
     
-    ipcMain.handle("get-speech-availability", () => {
-      return speechService.isAvailable ? speechService.isAvailable() : false;
-    });
-
-    ipcMain.handle("start-speech-recognition", () => {
-      speechService.startRecording();
-      return speechService.getStatus();
-    });
-
-    ipcMain.handle("stop-speech-recognition", () => {
-      speechService.stopRecording();
-      return speechService.getStatus();
-    });
-
-    // Also handle direct send events for fallback
-    ipcMain.on("start-speech-recognition", () => {
-      speechService.startRecording();
-    });
-
-    ipcMain.on("stop-speech-recognition", () => {
-      speechService.stopRecording();
-    });
+    // Speech recognition handlers removed - keeping only chat and screenshot
 
     ipcMain.on("chat-window-ready", () => {
       // Send a test message to confirm communication
@@ -340,7 +270,7 @@ class ApplicationController {
 
     ipcMain.on("test-chat-window", () => {
       windowManager.broadcastToAllWindows("transcription-received", {
-        text: "🧪 IMMEDIATE TEST: Chat window IPC communication test successful!",
+        text: "[TEST] Chat window IPC communication test successful!",
       });
     });
 
@@ -434,7 +364,7 @@ class ApplicationController {
       // Add chat message to session memory
       sessionManager.addUserInput(text, 'chat');
       logger.debug('Chat message added to session memory', { textLength: text.length });
-      
+
       // Process typed message with LLM in the same way as transcribed text
       setTimeout(async () => {
         try {
@@ -447,7 +377,7 @@ class ApplicationController {
           });
         }
       }, 500);
-      
+
       return { success: true };
     });
 
@@ -767,13 +697,18 @@ class ApplicationController {
     const startTime = Date.now();
 
     try {
-      windowManager.showLLMLoading();
+      // Show capture is in progress
+      windowManager.broadcastToAllWindows("capture-started", {
+        message: "Analyzing image..."
+      });
 
-  const capture = await captureService.captureAndProcess();
+      const capture = await captureService.captureAndProcess();
 
       if (!capture.imageBuffer || !capture.imageBuffer.length) {
-        windowManager.hideLLMResponse();
-        this.broadcastOCRError("Failed to capture screenshot image");
+        // Send error to chat instead
+        windowManager.broadcastToAllWindows("llm-error", {
+          error: "Failed to capture screenshot image"
+        });
         return;
       }
 
@@ -799,22 +734,27 @@ class ApplicationController {
         isImageAnalysis: true
       });
 
-      windowManager.showLLMResponse(llmResult.response, {
-        skill: this.activeSkill,
-        processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
-        isImageAnalysis: true
+      // Send capture result directly to chat window (not separate response window)
+      windowManager.broadcastToAllWindows("transcription-llm-response", {
+        response: llmResult.response,
+        metadata: {
+          skill: this.activeSkill,
+          processingTime: llmResult.metadata.processingTime,
+          usedFallback: llmResult.metadata.usedFallback,
+          isImageAnalysis: true,
+          isTranscriptionResponse: true
+        }
       });
-
-      this.broadcastLLMSuccess(llmResult);
     } catch (error) {
       logger.error("Screenshot OCR process failed", {
         error: error.message,
         duration: Date.now() - startTime,
       });
 
-      windowManager.hideLLMResponse();
-      this.broadcastOCRError(error.message);
+      // Send error to chat instead
+      windowManager.broadcastToAllWindows("llm-error", {
+        error: `Screenshot OCR failed: ${error.message}`
+      });
       
       sessionManager.addConversationEvent({
         role: 'system',
@@ -948,40 +888,8 @@ class ApplicationController {
         text: text ? text.substring(0, 100) : 'undefined'
       });
 
-      // Try to provide a fallback response
-      try {
-        const fallbackResult = llmService.generateIntelligentFallbackResponse(text, this.activeSkill);
-        
-        sessionManager.addModelResponse(fallbackResult.response, {
-          skill: this.activeSkill,
-          processingTime: fallbackResult.metadata.processingTime,
-          usedFallback: true,
-          isTranscriptionResponse: true,
-          fallbackReason: error.message
-        });
-
-        this.broadcastTranscriptionLLMResponse(fallbackResult);
-        
-        logger.info("Used fallback response for transcription", {
-          skill: this.activeSkill,
-          fallbackResponse: fallbackResult.response
-        });
-        
-      } catch (fallbackError) {
-        logger.error("Fallback response also failed", {
-          fallbackError: fallbackError.message
-        });
-
-        sessionManager.addConversationEvent({
-          role: 'system',
-          content: `Transcription LLM processing failed: ${error.message}`,
-          action: 'transcription_llm_error',
-          metadata: {
-            error: error.message,
-            skill: this.activeSkill
-          }
-        });
-      }
+      // No fallback - just log and notify
+      this.broadcastLLMError(`Error processing request: ${error.message}`);
     }
   }
 
@@ -1083,10 +991,7 @@ class ApplicationController {
       codingLanguage: this.codingLanguage || "cpp", // Default to C++
       activeSkill: this.activeSkill || "dsa",
       appIcon: this.appIcon || "terminal",
-      selectedIcon: this.appIcon || "terminal",
-      // pass through env-derived settings for UI convenience (masked)
-      azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
-      speechAvailable: this.speechAvailable
+      selectedIcon: this.appIcon || "terminal"
     };
   }
   

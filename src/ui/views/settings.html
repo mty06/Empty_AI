@@ -149,13 +149,6 @@
             background: rgba(244, 67, 54, 1);
         }
 
-        .btn.btn-quit {
-            background: rgba(255, 71, 87, 0.8);
-        }
-
-        .btn.btn-quit:hover {
-            background: rgba(255, 71, 87, 1);
-        }
 
         .input-field {
             background: rgba(255, 255, 255, 0.1);
@@ -280,14 +273,6 @@
                 Settings
             </div>
             <div class="header-actions">
-                <button class="btn btn-quit" id="quitButton">
-                    <i class="fas fa-power-off"></i>
-                    Quit
-                </button>
-                <button class="btn" id="closeButton">
-                    <i class="fas fa-times"></i>
-                    Close
-                </button>
             </div>
         </div>
         
@@ -311,15 +296,6 @@
                             <option value="javascript">JavaScript</option>
                         </select>
                     </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Active Skill</div>
-                            <div class="settings-item-description">Choose your current focus area</div>
-                        </div>
-                        <select class="input-field" id="activeSkill">
-                            <option value="dsa">Data Structures & Algorithms</option>
-                        </select>
-                    </div>
                 </div>
             </div>
 
@@ -331,118 +307,23 @@
                 <div class="settings-section-content">
                     <div class="icon-grid" id="iconGrid">
                         <div class="icon-option" data-icon="terminal">
-                            <img src="./assests/icons/terminal.png" alt="Terminal">
+                            <img src="../../../public/assets/icons/terminal.png" alt="Terminal">
                             <div>Terminal</div>
                         </div>
                         <div class="icon-option" data-icon="activity">
-                            <img src="./assests/icons/activity.png" alt="Activity">
+                            <img src="../../../public/assets/icons/activity.png" alt="Activity">
                             <div>Activity</div>
                         </div>
                         <div class="icon-option" data-icon="settings">
-                            <img src="./assests/icons/settings.png" alt="Settings">
+                            <img src="../../../public/assets/icons/settings.png" alt="Settings">
                             <div>Settings</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="settings-section">
-                <div class="settings-section-title">
-                    <i class="fas fa-microphone"></i>
-                    Speech Recognition
-                </div>
-                <div class="settings-section-content">
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Speech Provider</div>
-                            <div class="settings-item-description">Choose Azure Speech or a local OpenAI Whisper CLI</div>
-                        </div>
-                        <select class="input-field" id="speechProvider">
-                            <option value="azure">Azure Speech</option>
-                            <option value="whisper">Local Whisper</option>
-                        </select>
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Azure Speech Key</div>
-                            <div class="settings-item-description">Your Azure Cognitive Services API key</div>
-                        </div>
-                        <input type="password" class="input-field" id="azureKey" placeholder="Enter your Azure key">
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Azure Region</div>
-                            <div class="settings-item-description">Your Azure service region</div>
-                        </div>
-                        <input type="text" class="input-field" id="azureRegion" placeholder="e.g. eastus">
-                    </div>
-                    <div class="settings-item">
-                        <div class="settings-stack">
-                            <div>
-                                <div class="settings-item-label">Whisper Command</div>
-                                <div class="settings-item-description">CLI command for local Whisper, such as <code>whisper</code> or <code>python3 -m whisper</code></div>
-                            </div>
-                            <input type="text" class="input-field" id="whisperCommand" placeholder="whisper" style="max-width: 100%;">
-                        </div>
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Whisper Model</div>
-                            <div class="settings-item-description">Local model name used by the Whisper CLI</div>
-                        </div>
-                        <input type="text" class="input-field" id="whisperModel" placeholder="base">
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Whisper Language</div>
-                            <div class="settings-item-description">Language code for local transcription</div>
-                        </div>
-                        <input type="text" class="input-field" id="whisperLanguage" placeholder="en">
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Whisper Segment Length</div>
-                            <div class="settings-item-description">Chunk size in milliseconds for local transcription</div>
-                        </div>
-                        <input type="number" class="input-field" id="whisperSegmentMs" placeholder="4000" min="2000" step="500">
-                    </div>
-                    <div class="settings-note">
-                        Local Whisper runs on this machine and needs a Whisper CLI installed. These settings apply immediately for the current app session; use <code>.env</code> for startup defaults.
-                    </div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <div class="settings-section-title">
-                    <i class="fas fa-robot"></i>
-                    Gemini Settings
-                </div>
-                <div class="settings-section-content">
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Google API Key</div>
-                            <div class="settings-item-description">Your Google API key for Gemini models</div>
-                        </div>
-                        <input type="password" class="input-field" id="geminiKey" placeholder="Enter your Google API key">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <div class="settings-section-title">
-                    <i class="fas fa-window-maximize"></i>
-                    Window Settings
-                </div>
-                <div class="settings-section-content">
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Window Gap</div>
-                            <div class="settings-item-description">Gap between bound windows (in pixels)</div>
-                        </div>
-                        <input type="number" class="input-field" id="windowGap" placeholder="20" min="0" max="100">
-                    </div>
-                </div>
-            </div>
+            <!-- Speech Recognition section removed -->
+
         </div>
     </div>
 

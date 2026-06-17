@@ -511,21 +511,21 @@
                 console.error('[LLM-RESPONSE] no markdown renderer available, falling back to plain text');
             }
 
-            console.log('[LLM-RESPONSE] electronAPI exists:', !!window.electronAPI);
-            console.log('[LLM-RESPONSE] onDisplayLlmResponse method:', typeof window.electronAPI?.onDisplayLlmResponse);
+            console.log('[LLM-RESPONSE] electronAPI exists:', !!window.emptyAPI);
+            console.log('[LLM-RESPONSE] onDisplayLlmResponse method:', typeof window.emptyAPI?.onDisplayLlmResponse);
             
             // Set up event listeners using electronAPI from preload script
-            if (window.electronAPI) {
+            if (window.emptyAPI) {
                 console.log('[LLM-RESPONSE] Setting up IPC listeners...');
                 
                 // Set up show-loading event listener
-                window.electronAPI.onShowLoading(() => {
+                window.emptyAPI.onShowLoading(() => {
                     console.log('[LLM-RESPONSE] show-loading received');
                     showLoadingState();
                 });
                 
                 // Listen for LLM response
-                window.electronAPI.onDisplayLlmResponse(function() {
+                window.emptyAPI.onDisplayLlmResponse(function() {
                     console.log('[LLM-RESPONSE] ===== display-llm-response received! =====');
                     console.log('[LLM-RESPONSE] arguments count:', arguments.length);
                     
@@ -668,7 +668,7 @@
             
             // Request dynamic window sizing based on content
             setTimeout(() => {
-                window.electronAPI.resizeLlmWindowForContent(contentMetrics)
+                window.emptyAPI.resizeLlmWindowForContent(contentMetrics)
                     .then(result => {
                     })
                     .catch(error => {
@@ -765,8 +765,8 @@
                 e.stopPropagation();
                 try {
                     let ok = false;
-                    if (window.electronAPI && typeof window.electronAPI.copyToClipboard === 'function') {
-                        ok = await window.electronAPI.copyToClipboard(text);
+                    if (window.emptyAPI && typeof window.emptyAPI.copyToClipboard === 'function') {
+                        ok = await window.emptyAPI.copyToClipboard(text);
                     }
                     if (!ok) {
                         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1011,8 +1011,8 @@
             if (btn) {
                 btn.addEventListener('click', () => {
                     try {
-                        if (window.electronAPI && window.electronAPI.closeWindow) {
-                            window.electronAPI.closeWindow();
+                        if (window.emptyAPI && window.emptyAPI.closeWindow) {
+                            window.emptyAPI.closeWindow();
                         } else if (window.api && window.api.send) {
                             window.api.send('quit-app');
                         } else {

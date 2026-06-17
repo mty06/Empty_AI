@@ -25,7 +25,7 @@ class ChatWindowUI {
         try {
             this.setupElements();
             this.setupEventListeners();
-            this.addMessage('Chat window initialized. Click microphone or press ⌘+R to start recording.', 'system');
+            this.addMessage('Chat window initialized. Type your message to start.', 'system');
             
             logger.info('Chat window UI initialized successfully');
         } catch (error) {
@@ -125,7 +125,7 @@ class ChatWindowUI {
             
             window.emptyAPI.onOcrCompleted((event, data) => {
                 if (data.text && data.text.trim()) {
-                    this.addMessage(`📷 OCR Result: ${data.text}`, 'transcription');
+                    this.addMessage(`[OCR] Result: ${data.text}`, 'transcription');
                 }
             });
             
@@ -280,27 +280,28 @@ class ChatWindowUI {
                 
                 // Show a brief activation message with the skill title
                 const icons = {
-                    'dsa': '🧠',
-                    'behavioral': '💼', 
-                    'sales': '💰',
-                    'presentation': '🎤',
-                    'data-science': '📊',
-                    'programming': '💻',
-                    'devops': '🚀',
-                    'system-design': '🏗️',
-                    'negotiation': '🤝'
+                    'general': '[GENERAL]',
+                    'dsa': '[DSA]',
+                    'behavioral': '[BEHAVIORAL]',
+                    'sales': '[SALES]',
+                    'presentation': '[PRESENTATION]',
+                    'data-science': '[DATA-SCIENCE]',
+                    'programming': '[PROGRAMMING]',
+                    'devops': '[DEVOPS]',
+                    'system-design': '[SYSTEM-DESIGN]',
+                    'negotiation': '[NEGOTIATION]'
                 };
-                
-                const icon = icons[skillName] || '🎯';
+
+                const icon = icons[skillName] || '[SKILL]';
                 this.addMessage(`${icon} ${cleanTitle} - Ready to help!`, 'system');
             } else {
                 // Fallback if prompt not found
-                this.addMessage(`🎯 ${skillName.toUpperCase()} Mode: Ready to help!`, 'system');
+                this.addMessage(`[SKILL] ${skillName.toUpperCase()} Mode: Ready to help!`, 'system');
             }
         } catch (error) {
             logger.error('Failed to load skill prompt', { skill: skillName, error: error.message });
             // Fallback message
-            this.addMessage(`🎯 ${skillName.toUpperCase()} Mode: Ready to help!`, 'system');
+            this.addMessage(`[SKILL] ${skillName.toUpperCase()} Mode: Ready to help!`, 'system');
         }
         
         logger.info('Skill activated in chat', { skill: skillName });
@@ -588,6 +589,6 @@ class ChatWindowUI {
     }
 
 } catch (error) {
-    console.error('💥 CHAT-WINDOW.JS: Script execution failed!', error);
-    console.error('💥 CHAT-WINDOW.JS: Error stack:', error.stack);
+    console.error('[ERROR] CHAT-WINDOW.JS: Script execution failed!', error);
+    console.error('[ERROR] CHAT-WINDOW.JS: Error stack:', error.stack);
 }

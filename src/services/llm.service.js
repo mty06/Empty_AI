@@ -231,64 +231,42 @@ class LLMService {
 
     const startTime = Date.now();
     this.requestCount++;
-    
+
     try {
-      logger.info('Processing text with LLM', {
-        activeSkill,
-        textLength: text.length,
-        hasSessionMemory: sessionMemory.length > 0,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
+      if (!this.isInitialized || !this.model) {
+        throw new Error('Gemini model not initialized');
+      }
+
+      logger.info('Processing text with Gemini', { textLength: text.length });
+
+      // Load the general prompt
+      const { promptLoader } = require('../utils/prompt-loader');
+      const systemPrompt = promptLoader.getSkillPrompt('general') || 'You are a helpful AI assistant.';
+
+      // Simple direct call to Gemini
+      const result = await this.model.generateContent({
+        contents: [{
+          role: 'user',
+          parts: [{ text: text }]
+        }],
+        systemInstruction: { parts: [{ text: systemPrompt }] }
       });
 
-      const geminiRequest = this.buildGeminiRequest(text, activeSkill, sessionMemory, programmingLanguage);
-
-      const preferAlternative = !!config.get('llm.gemini.enableFallbackMethod');
-      let response;
-      try {
-        if (preferAlternative) {
-          logger.debug('Attempting alternative HTTPS method first for text processing');
-          response = await this.executeAlternativeRequest(geminiRequest);
-        } else {
-          response = await this.executeRequest(geminiRequest);
-        }
-      } catch (error) {
-        const secondaryLabel = preferAlternative ? 'primary SDK method' : 'alternative HTTPS method';
-        logger.warn(`${preferAlternative ? 'Alternative' : 'Primary'} method failed, trying ${secondaryLabel}`, {
-          error: error.message,
-          requestId: this.requestCount
-        });
-        const secondaryFn = preferAlternative ? this.executeRequest.bind(this) : this.executeAlternativeRequest.bind(this);
-        try {
-          response = await secondaryFn(geminiRequest);
-        } catch (secondaryError) {
-          logger.error('Both Gemini request methods failed for text processing', {
-            firstError: error.message,
-            secondError: secondaryError.message,
-            requestId: this.requestCount
-          });
-          throw secondaryError;
-        }
+      if (!result.response) {
+        throw new Error('Empty response from Gemini');
       }
-      
-      // Enforce language in code fences if programmingLanguage specified
-      const finalResponse = programmingLanguage
-        ? this.enforceProgrammingLanguage(response, programmingLanguage)
-        : response;
 
-      logger.logPerformance('LLM text processing', startTime, {
-        activeSkill,
+      const responseText = result.response.text();
+
+      logger.info('Gemini response received', {
         textLength: text.length,
-        responseLength: finalResponse.length,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
+        responseLength: responseText.length
       });
 
       return {
-        response: finalResponse,
+        response: responseText,
         metadata: {
           skill: activeSkill,
-          programmingLanguage,
           processingTime: Date.now() - startTime,
           requestId: this.requestCount,
           usedFallback: false
@@ -296,86 +274,67 @@ class LLMService {
       };
     } catch (error) {
       this.errorCount++;
-      logger.error('LLM processing failed', {
-        error: error.message,
-        activeSkill,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
-      });
-
-      if (config.get('llm.gemini.fallbackEnabled')) {
-        return this.generateFallbackResponse(text, activeSkill);
-      }
-      
+      logger.error('Gemini call failed', { error: error.message });
       throw error;
     }
   }
 
   async processTranscriptionWithIntelligentResponse(text, activeSkill, sessionMemory = [], programmingLanguage = null) {
-    if (!this.isInitialized) {
-      throw new Error('LLM service not initialized. Check Gemini API key configuration.');
-    }
-
     const startTime = Date.now();
     this.requestCount++;
-    
+
     try {
-      logger.info('Processing transcription with intelligent response', {
-        activeSkill,
-        textLength: text.length,
-        hasSessionMemory: sessionMemory.length > 0,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
-      });
-
-      const geminiRequest = this.buildIntelligentTranscriptionRequest(text, activeSkill, sessionMemory, programmingLanguage);
-
-      const preferAlternative = !!config.get('llm.gemini.enableFallbackMethod');
-      let response;
-      try {
-        if (preferAlternative) {
-          logger.debug('Attempting alternative HTTPS method first for transcription processing');
-          response = await this.executeAlternativeRequest(geminiRequest);
-        } else {
-          response = await this.executeRequest(geminiRequest);
-        }
-      } catch (error) {
-        const secondaryLabel = preferAlternative ? 'primary SDK method' : 'alternative HTTPS method';
-        logger.warn(`${preferAlternative ? 'Alternative' : 'Primary'} method failed, trying ${secondaryLabel}`, {
-          error: error.message,
-          requestId: this.requestCount
-        });
-        const secondaryFn = preferAlternative ? this.executeRequest.bind(this) : this.executeAlternativeRequest.bind(this);
-        try {
-          response = await secondaryFn(geminiRequest);
-        } catch (secondaryError) {
-          logger.error('Both Gemini request methods failed for transcription processing', {
-            firstError: error.message,
-            secondError: secondaryError.message,
-            requestId: this.requestCount
-          });
-          throw secondaryError;
-        }
+      // Validate model
+      if (!this.isInitialized || !this.model) {
+        return {
+          response: 'AI service not ready. Please check your API key.',
+          metadata: {
+            skill: activeSkill,
+            processingTime: Date.now() - startTime,
+            requestId: this.requestCount,
+            usedFallback: true,
+            isTranscriptionResponse: true
+          }
+        };
       }
-      
-      // Enforce language in code fences if programmingLanguage specified
-      const finalResponse = programmingLanguage
-        ? this.enforceProgrammingLanguage(response, programmingLanguage)
-        : response;
 
-      logger.logPerformance('LLM transcription processing', startTime, {
-        activeSkill,
-        textLength: text.length,
-        responseLength: finalResponse.length,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
+      // Load system prompt
+      const systemPrompt = promptLoader.getSkillPrompt('general') || 'You are a helpful AI assistant.';
+
+      // Build contents array - simple version
+      const contents = [
+        {
+          role: 'user',
+          parts: [{ text: text }]
+        }
+      ];
+
+      // Call Gemini
+      const result = await this.model.generateContent({
+        contents: contents,
+        systemInstruction: { parts: [{ text: systemPrompt }] }
       });
+
+      // Extract response
+      if (!result.response || !result.response.text) {
+        return {
+          response: 'No response from AI. Please try again.',
+          metadata: {
+            skill: activeSkill,
+            processingTime: Date.now() - startTime,
+            requestId: this.requestCount,
+            usedFallback: true,
+            isTranscriptionResponse: true
+          }
+        };
+      }
+
+      const responseText = result.response.text();
 
       return {
-        response: finalResponse,
+        response: responseText,
         metadata: {
           skill: activeSkill,
-          programmingLanguage,
           processingTime: Date.now() - startTime,
           requestId: this.requestCount,
           usedFallback: false,
@@ -384,18 +343,18 @@ class LLMService {
       };
     } catch (error) {
       this.errorCount++;
-      logger.error('LLM transcription processing failed', {
-        error: error.message,
-        activeSkill,
-        programmingLanguage: programmingLanguage || 'not specified',
-        requestId: this.requestCount
-      });
 
-      if (config.get('llm.gemini.fallbackEnabled')) {
-        return this.generateIntelligentFallbackResponse(text, activeSkill);
-      }
-      
-      throw error;
+      // Return error response instead of throwing
+      return {
+        response: `Error: ${error.message}`,
+        metadata: {
+          skill: activeSkill,
+          processingTime: Date.now() - startTime,
+          requestId: this.requestCount,
+          usedFallback: true,
+          isTranscriptionResponse: true
+        }
+      };
     }
   }
 

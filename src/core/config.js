@@ -43,8 +43,8 @@ class ConfigManager {
           model: 'gemini-2.5-flash',
           maxRetries: 3,
           timeout: 60000,
-          fallbackEnabled: true,
-          enableFallbackMethod: true,
+          fallbackEnabled: false,
+          enableFallbackMethod: false,
           generation: {
             temperature: 0.7,
             topK: 32,

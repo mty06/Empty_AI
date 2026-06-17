@@ -10,7 +10,7 @@ class MainWindowUI {
     constructor() {
         this.isInteractive = false;
         this.isHidden = false;
-        this.currentSkill = 'dsa'; // Default, will be updated from settings
+        this.currentSkill = 'general'; // Default to general for all topics
         this.statusDot = null;
         this.skillIndicator = null;
         this.micButton = null;
@@ -20,6 +20,7 @@ class MainWindowUI {
         
         // Define available skills for navigation
         this.availableSkills = [
+            'general',
             'dsa'
         ];
         
@@ -486,8 +487,9 @@ class MainWindowUI {
     handleLLMResponse(data) {
         const skill = data.skill || data.metadata?.skill || 'General';
         const skillNames = {
+            'general': 'General Assistant',
             'dsa': 'DSA',
-            'behavioral': 'Behavioral', 
+            'behavioral': 'Behavioral',
             'sales': 'Sales',
             'presentation': 'Presentation',
             'data-science': 'Data Science',
@@ -626,8 +628,9 @@ class MainWindowUI {
 
     updateSkillIndicator() {
         const skillNames = {
+            'general': 'General Assistant',
             'dsa': 'DSA',
-            'behavioral': 'Behavioral', 
+            'behavioral': 'Behavioral',
             'sales': 'Sales',
             'presentation': 'Presentation',
             'data-science': 'Data Science',
@@ -739,8 +742,9 @@ class MainWindowUI {
 
     showSkillChangeNotification(skill, direction) {
         const skillNames = {
+            'general': 'General Assistant',
             'dsa': 'DSA',
-            'behavioral': 'Behavioral', 
+            'behavioral': 'Behavioral',
             'sales': 'Sales',
             'presentation': 'Presentation',
             'data-science': 'Data Science',
@@ -892,8 +896,8 @@ class MainWindowUI {
         modal.innerHTML = `
             <div class="bg-gray-900 text-white p-6 rounded-lg max-w-md w-full">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">🤖 Gemini Flash 1.5 Configuration</h2>
-                    <button class="text-gray-400 hover:text-white" onclick="this.closest('.fixed').remove()">✕</button>
+                    <h2 class="text-xl font-bold">[GEMINI] Configuration</h2>
+                    <button class="text-gray-400 hover:text-white" onclick="this.closest('.fixed').remove()">X</button>
                 </div>
                 
                 <div class="mb-4 p-3 rounded ${status.hasApiKey ? 'bg-green-900' : 'bg-red-900'}">

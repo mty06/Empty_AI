@@ -4,19 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Get DOM elements
-    const closeButton = document.getElementById('closeButton');
-    const quitButton = document.getElementById('quitButton');
     const speechProviderSelect = document.getElementById('speechProvider');
     const azureKeyInput = document.getElementById('azureKey');
     const azureRegionInput = document.getElementById('azureRegion');
     const whisperCommandInput = document.getElementById('whisperCommand');
     const whisperModelInput = document.getElementById('whisperModel');
     const whisperLanguageInput = document.getElementById('whisperLanguage');
-    const whisperSegmentMsInput = document.getElementById('whisperSegmentMs');
-    const geminiKeyInput = document.getElementById('geminiKey');
-    const windowGapInput = document.getElementById('windowGap');
     const codingLanguageSelect = document.getElementById('codingLanguage');
-    const activeSkillSelect = document.getElementById('activeSkill');
     const iconGrid = document.getElementById('iconGrid');
 
     // Check if window.api exists
@@ -37,27 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Close button handler
-    if (closeButton) {
-        closeButton.addEventListener('click', () => {
-            window.api.send('close-settings');
-        });
-    }
-
-    // Quit button handler - clean exit
-    if (quitButton) {
-        quitButton.addEventListener('click', () => {
-            try {
-                if (window.emptyAPI && window.emptyAPI.quit) {
-                    window.emptyAPI.quit();
-                } else {
-                    console.error('emptyAPI.quit not available');
-                }
-            } catch (error) {
-                console.error('Error quitting app:', error);
-            }
-        });
-    }
-
     // Function to load settings into UI
     const loadSettingsIntoUI = (settings) => {
         if (settings.speechProvider && speechProviderSelect) speechProviderSelect.value = settings.speechProvider;
@@ -66,17 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.whisperCommand && whisperCommandInput) whisperCommandInput.value = settings.whisperCommand;
         if (settings.whisperModel && whisperModelInput) whisperModelInput.value = settings.whisperModel;
         if (settings.whisperLanguage && whisperLanguageInput) whisperLanguageInput.value = settings.whisperLanguage;
-        if (settings.whisperSegmentMs && whisperSegmentMsInput) whisperSegmentMsInput.value = settings.whisperSegmentMs;
-        if (settings.geminiKey && geminiKeyInput) geminiKeyInput.value = settings.geminiKey;
-        if (settings.windowGap && windowGapInput) windowGapInput.value = settings.windowGap;
-        
         // Set C++ as default if no coding language is specified
         if (codingLanguageSelect) {
             codingLanguageSelect.value = settings.codingLanguage || 'cpp';
         }
-        
-        if (settings.activeSkill && activeSkillSelect) activeSkillSelect.value = settings.activeSkill;
-        
+
         // Handle icon selection
         const selectedIcon = settings.selectedIcon || settings.appIcon;
         if (selectedIcon && iconGrid) {
@@ -122,12 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (whisperCommandInput) settings.whisperCommand = whisperCommandInput.value;
         if (whisperModelInput) settings.whisperModel = whisperModelInput.value;
         if (whisperLanguageInput) settings.whisperLanguage = whisperLanguageInput.value;
-        if (whisperSegmentMsInput) settings.whisperSegmentMs = whisperSegmentMsInput.value;
-        if (geminiKeyInput) settings.geminiKey = geminiKeyInput.value;
-        if (windowGapInput) settings.windowGap = windowGapInput.value;
         if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
-        if (activeSkillSelect) settings.activeSkill = activeSkillSelect.value;
-        
+
         window.api.send('save-settings', settings);
     };
 
@@ -153,9 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         whisperCommandInput,
         whisperModelInput,
         whisperLanguageInput,
-        whisperSegmentMsInput,
-        geminiKeyInput,
-        windowGapInput
+        whisperSegmentMsInput
     ];
 
     inputs.forEach(input => {
@@ -183,15 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // fallback
                 saveSettings();
             }
-        });
-    }
-
-    // Skill selection handler
-    if (activeSkillSelect) {
-        activeSkillSelect.addEventListener('change', (e) => {
-            saveSettings();
-            // Also update the main window
-            window.api.send('update-skill', e.target.value);
         });
     }
 

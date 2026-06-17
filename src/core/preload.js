@@ -6,10 +6,7 @@ contextBridge.exposeInMainWorld('emptyAPI', {
   // Screenshot and OCR
   takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),
   
-  // Speech recognition
-  startSpeechRecognition: () => ipcRenderer.invoke('start-speech-recognition'),
-  stopSpeechRecognition: () => ipcRenderer.invoke('stop-speech-recognition'),
-  getSpeechAvailability: () => ipcRenderer.invoke('get-speech-availability'),
+  // Speech recognition removed
   
   // Window management
   showAllWindows: () => ipcRenderer.invoke('show-all-windows'),
@@ -71,11 +68,7 @@ contextBridge.exposeInMainWorld('emptyAPI', {
   captureArea: (options) => ipcRenderer.invoke('capture-area', options),
   
   // Event listeners
-  onTranscriptionReceived: (callback) => ipcRenderer.on('transcription-received', callback),
-  onInterimTranscription: (callback) => ipcRenderer.on('interim-transcription', callback),
-  onSpeechStatus: (callback) => ipcRenderer.on('speech-status', callback),
-  onSpeechError: (callback) => ipcRenderer.on('speech-error', callback),
-  onSpeechAvailability: (callback) => ipcRenderer.on('speech-availability', callback),
+  // Speech event listeners removed
   onSessionEvent: (callback) => ipcRenderer.on('session-event', callback),
   onSessionCleared: (callback) => ipcRenderer.on('session-cleared', callback),
   onOcrCompleted: (callback) => ipcRenderer.on('ocr-completed', callback),
