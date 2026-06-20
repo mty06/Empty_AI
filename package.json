@@ -86,7 +86,12 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "config/build/entitlements.mac.plist",
-      "entitlementsInherit": "config/build/entitlements.mac.plist"
+      "entitlementsInherit": "config/build/entitlements.mac.plist",
+      "extendInfo": {
+        "LSUIElement": true,
+        "LSBackgroundOnly": false,
+        "NSSupportsAutomaticGraphicsSwitching": true
+      }
     },
     "win": {
       "target": [
