@@ -17,11 +17,6 @@ app.commandLine.appendSwitch("disable-component-update");
 app.commandLine.appendSwitch("disable-domain-reliability");
 app.commandLine.appendSwitch("no-pings");
 
-// Prevent app from showing in Dock on macOS
-if (process.platform === "darwin") {
-  app.dock.hide();
-}
-
 // Services
 // Screen capture (image-based)
 const captureService = require("./src/services/capture.service");
@@ -72,10 +67,7 @@ class ApplicationController {
   setupEventHandlers() {
     app.whenReady().then(() => this.onAppReady());
     app.on("window-all-closed", () => this.onWindowAllClosed());
-    app.on("activate", () => {
-      // Don't activate the app - this keeps it completely hidden from Dock
-      logger.debug("App activation suppressed to keep hidden from Dock");
-    });
+    app.on("activate", () => this.onActivate());
     app.on("will-quit", () => this.onWillQuit());
 
     this.setupIPCHandlers();
@@ -120,6 +112,11 @@ class ApplicationController {
     app.setName("Terminal ");
     process.title = "Terminal ";
 
+    // Hide from Mac Dock
+    if (process.platform === "darwin") {
+      app.dock.hide();
+    }
+
     logger.info("Application starting", {
       version: config.get("app.version"),
       environment: config.get("app.isDevelopment")
@@ -151,17 +148,6 @@ class ApplicationController {
       windowManager.showSettings();
 
       this.isReady = true;
-
-      // Aggressive Dock hiding loop - continuously hide the app
-      if (process.platform === "darwin") {
-        setInterval(() => {
-          try {
-            if (app.hide && typeof app.hide === 'function') {
-              app.hide();
-            }
-          } catch (e) {}
-        }, 100); // Check every 100ms
-      }
 
       if (mainWindow) {
         logger.info("Main window created but hidden", {
@@ -230,7 +216,6 @@ class ApplicationController {
       "CommandOrControl+Shift+C": () => windowManager.switchToWindow("chat"),
       "CommandOrControl+Shift+\\": () => this.clearSessionMemory(),
       "CommandOrControl+,": () => windowManager.toggleSettings(),
-      "CommandOrControl+Shift+Q": () => this.quitApp(),
       "Alt+A": () => windowManager.toggleInteraction(),
       "Alt+R": () => this.toggleSpeechRecognition(),
       "CommandOrControl+Shift+T": () => windowManager.forceAlwaysOnTopForAllWindows(),
@@ -701,20 +686,6 @@ class ApplicationController {
 
     // Broadcast the skill change to all windows
     windowManager.broadcastToAllWindows("skill-updated", { skill: newSkill });
-  }
-
-  quitApp() {
-    logger.info("Quit requested via keyboard shortcut");
-    setImmediate(() => {
-      try {
-        windowManager.destroyAllWindows();
-        globalShortcut.unregisterAll();
-        app.quit();
-      } catch (error) {
-        logger.error("Error during quit:", error);
-        process.exit(0);
-      }
-    });
   }
 
   async triggerScreenshotOCR() {

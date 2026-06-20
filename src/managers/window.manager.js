@@ -85,34 +85,20 @@ class WindowManager {
 
     this.isInitializing = true;
     logger.info('Initializing application windows');
-
+    
     try {
       await this.createMainWindow();
       await this.createChatWindow();
       await this.createLLMResponseWindow();
       await this.createSettingsWindow();
-
+      
       this.setupWindowEventHandlers();
       this.setupScreenTracking();
       this.setupScreenSharingDetection();
 
       // Make windows interactive by default so they are not click-through
       this.setInteractive(true);
-
-      // Enforce Dock hiding on macOS - keep app completely hidden
-      if (process.platform === 'darwin') {
-        const { app } = require('electron');
-        setInterval(() => {
-          try {
-            if (app.dock && typeof app.dock.hide === 'function') {
-              app.dock.hide();
-            }
-          } catch (e) {
-            // Silently fail if dock operations unavailable
-          }
-        }, 5000); // Re-enforce every 5 seconds
-      }
-
+      
       this.isInitialized = true;
       this.isInitializing = false;
       logger.info('All windows initialized successfully');
@@ -235,16 +221,13 @@ class WindowManager {
       title: windowConfig.title,
       skipTaskbar: true,
       alwaysOnTop: true,
+      visibleOnAllWorkspaces: true,
       fullscreenable: false,
       // Platform-specific always-on-top settings
       ...(process.platform === 'darwin' && {
-        type: 'accessory', // Accessory windows don't activate the app
         level: 'floating', // Start with floating level for macOS
-        hiddenInMissionControl: true, // Hide from Mission Control
-        focusable: false, // NEVER allow focus - this prevents Dock appearance
-        visibleOnAllWorkspaces: type !== 'main', // Only non-main windows on all spaces
-        acceptFirstMouse: false, // Don't activate on click
-        hasShadow: false
+        focusable: false, // Don't take focus
+        hiddenInMissionControl: true // Hide from Mission Control
       })
     };
 
@@ -267,6 +250,7 @@ class WindowManager {
         level: process.platform === 'darwin' ? 'floating' : undefined,
         // Additional macOS flags for better always-on-top behavior
         ...(process.platform === 'darwin' && {
+          type: 'panel',
           acceptFirstMouse: true,
           disableAutoHideCursor: true
         })
