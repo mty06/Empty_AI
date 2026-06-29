@@ -83,6 +83,9 @@
       ],
       "icon": "public/assets/icons/app-icon.icns",
       "darkModeSupport": true,
+      "extendInfo": {
+        "LSUIElement": true
+      },
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "config/build/entitlements.mac.plist",

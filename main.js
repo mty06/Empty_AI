@@ -31,6 +31,7 @@ class ApplicationController {
     this.isReady = false;
     this.activeSkill = "general";
     this.codingLanguage = "cpp";
+    this.dockHideTimer = null;
 
     // Window configurations for reference
     this.windowConfigs = {
@@ -55,6 +56,8 @@ class ApplicationController {
     }
     process.title = "Terminal ";
 
+    this.startPersistentDockHiding();
+
     if (
       process.platform === "darwin" &&
       config.get("stealth.noAttachConsole")
@@ -64,10 +67,49 @@ class ApplicationController {
     }
   }
 
+  startPersistentDockHiding() {
+    if (process.platform !== "darwin") {
+      return;
+    }
+
+    this.enforceDockHiding();
+
+    if (this.dockHideTimer) {
+      clearInterval(this.dockHideTimer);
+    }
+
+    this.dockHideTimer = setInterval(() => {
+      this.enforceDockHiding();
+    }, 2000);
+  }
+
+  enforceDockHiding() {
+    if (process.platform !== "darwin") {
+      return;
+    }
+
+    try {
+      if (typeof app.setActivationPolicy === "function") {
+        app.setActivationPolicy("accessory");
+      }
+
+      if (app.dock && typeof app.dock.hide === "function") {
+        app.dock.hide();
+      }
+    } catch (error) {
+      logger.warn("Failed to hide app from macOS Dock", {
+        error: error.message,
+      });
+    }
+  }
+
   setupEventHandlers() {
     app.whenReady().then(() => this.onAppReady());
     app.on("window-all-closed", () => this.onWindowAllClosed());
-    app.on("activate", () => this.onActivate());
+    app.on("activate", () => {
+      this.enforceDockHiding();
+      this.onActivate();
+    });
     app.on("will-quit", () => this.onWillQuit());
 
     this.setupIPCHandlers();
@@ -112,10 +154,7 @@ class ApplicationController {
     app.setName("Terminal ");
     process.title = "Terminal ";
 
-    // Hide from Mac Dock
-    if (process.platform === "darwin") {
-      app.dock.hide();
-    }
+    this.startPersistentDockHiding();
 
     logger.info("Application starting", {
       version: config.get("app.version"),
