@@ -139,7 +139,12 @@ class LLMService {
     return this.isInitialized && !!this.model;
   }
 
-  async processImageWithSkill(imageBuffer, mimeType, activeSkill, sessionMemory = [], programmingLanguage = null) {
+  buildSystemPromptWithContext(basePrompt, contextContent) {
+    if (!contextContent) return basePrompt;
+    return `${basePrompt}\n\n${contextContent}`;
+  }
+
+  async processImageWithSkill(imageBuffer, mimeType, activeSkill, sessionMemory = [], programmingLanguage = null, contextContent = null) {
     const clientReady = await this.ensureClientInitialized();
     if (!clientReady) {
       throw new Error(`LLM service not initialized. Check Gemini API key configuration. ${this.lastInitError || ''}`);
@@ -173,8 +178,9 @@ class LLMService {
 
       this.applyGenerationDefaults(request);
 
-      if (compactSkillPrompt && compactSkillPrompt.trim().length > 0) {
-        request.systemInstruction = { parts: [{ text: compactSkillPrompt }] };
+      const systemText = this.buildSystemPromptWithContext(compactSkillPrompt, contextContent);
+      if (systemText && systemText.trim().length > 0) {
+        request.systemInstruction = { parts: [{ text: systemText }] };
       }
 
       // Execute with retries/timeout - try alternative method first for network reliability
@@ -265,7 +271,7 @@ class LLMService {
     return `Analyze this screenshot briefly for a ${activeSkill.toUpperCase()} question. Extract the core problem and respond with a concise explanation and minimal code if needed.${langNote}`;
   }
 
-  async processTextWithSkill(text, activeSkill, sessionMemory = [], programmingLanguage = null) {
+  async processTextWithSkill(text, activeSkill, sessionMemory = [], programmingLanguage = null, contextContent = null) {
     const clientReady = await this.ensureClientInitialized();
     if (!clientReady) {
       throw new Error(`LLM service not initialized. Check Gemini API key configuration. ${this.lastInitError || ''}`);
@@ -283,7 +289,8 @@ class LLMService {
 
       // Load the general prompt
       const { promptLoader } = require('../utils/prompt-loader');
-      const systemPrompt = promptLoader.getSkillPrompt('general') || 'You are a helpful AI assistant.';
+      const basePrompt = promptLoader.getSkillPrompt('general') || 'You are a helpful AI assistant.';
+      const systemPrompt = this.buildSystemPromptWithContext(basePrompt, contextContent);
 
       // Simple direct call to Gemini
       const result = await this.model.generateContent({

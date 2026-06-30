@@ -1,247 +1,139 @@
-document.addEventListener('DOMContentLoaded', () => {    
-    const logger = {
-        info: (...args) => console.log('[SettingsWindowUI]', ...args)
-    };
-
-    // Get DOM elements
-    const speechProviderSelect = document.getElementById('speechProvider');
-    const azureKeyInput = document.getElementById('azureKey');
-    const azureRegionInput = document.getElementById('azureRegion');
-    const whisperCommandInput = document.getElementById('whisperCommand');
-    const whisperModelInput = document.getElementById('whisperModel');
-    const whisperLanguageInput = document.getElementById('whisperLanguage');
+document.addEventListener('DOMContentLoaded', () => {
     const codingLanguageSelect = document.getElementById('codingLanguage');
-    const iconGrid = document.getElementById('iconGrid');
+    const addFileBtn = document.getElementById('addFileBtn');
+    const contextFilesList = document.getElementById('contextFilesList');
+    const noContextFilesMsg = document.getElementById('noContextFilesMsg');
+    const contextFooter = document.getElementById('contextFooter');
+    const clearContextBtn = document.getElementById('clearContextBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 
-    // Check if window.api exists
-    if (!window.api) {
-        console.error('window.api not available');
+    const closeSettings = () => window.api && window.api.send('close-settings');
+
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
+
+    if (!window.emptyAPI) {
+        console.error('[Settings] window.emptyAPI not available');
         return;
     }
 
-    // Request current settings when window opens
-    const requestCurrentSettings = () => {
-        if (window.emptyAPI && window.emptyAPI.getSettings) {
-            window.emptyAPI.getSettings().then(settings => {
-                loadSettingsIntoUI(settings);
-            }).catch(error => {
-                console.error('Failed to get settings:', error);
-            });
-        }
-    };
+    // ── Language ──────────────────────────────────────────────────────────────
 
-    // Close button handler
-    // Function to load settings into UI
-    const loadSettingsIntoUI = (settings) => {
-        if (settings.speechProvider && speechProviderSelect) speechProviderSelect.value = settings.speechProvider;
-        if (settings.azureKey && azureKeyInput) azureKeyInput.value = settings.azureKey;
-        if (settings.azureRegion && azureRegionInput) azureRegionInput.value = settings.azureRegion;
-        if (settings.whisperCommand && whisperCommandInput) whisperCommandInput.value = settings.whisperCommand;
-        if (settings.whisperModel && whisperModelInput) whisperModelInput.value = settings.whisperModel;
-        if (settings.whisperLanguage && whisperLanguageInput) whisperLanguageInput.value = settings.whisperLanguage;
-        // Set C++ as default if no coding language is specified
-        if (codingLanguageSelect) {
-            codingLanguageSelect.value = settings.codingLanguage || 'cpp';
-        }
-
-        // Handle icon selection
-        const selectedIcon = settings.selectedIcon || settings.appIcon;
-        if (selectedIcon && iconGrid) {
-            const iconOptions = iconGrid.querySelectorAll('.icon-option');
-            iconOptions.forEach(option => {
-                if (option.dataset.icon === selectedIcon) {
-                    option.classList.add('selected');
-                } else {
-                    option.classList.remove('selected');
-                }
-            });
-        }
-
-        updateSpeechFieldStates();
-    };
-
-    // Load settings when window opens
-    window.api.receive('load-settings', (settings) => {
-        loadSettingsIntoUI(settings);
-    });
-
-    // Listen for settings window shown event
-    if (window.emptyAPI && window.emptyAPI.receive) {
-        window.emptyAPI.receive('settings-window-shown', () => {
-            requestCurrentSettings();
-        });
-
-    // Listen for coding language changes from other windows via helper
-    window.emptyAPI.onCodingLanguageChanged((event, data) => {
-            if (data && data.language && codingLanguageSelect) {
-                codingLanguageSelect.value = data.language;
-                console.log('Language updated from overlay window:', data.language);
+    const loadSettings = async () => {
+        try {
+            const settings = await window.emptyAPI.getSettings();
+            if (settings && codingLanguageSelect) {
+                codingLanguageSelect.value = settings.codingLanguage || 'none';
             }
-    });
-    }
-
-    // Save settings helper function
-    const saveSettings = () => {
-        const settings = {};
-        if (speechProviderSelect) settings.speechProvider = speechProviderSelect.value;
-        if (azureKeyInput) settings.azureKey = azureKeyInput.value;
-        if (azureRegionInput) settings.azureRegion = azureRegionInput.value;
-        if (whisperCommandInput) settings.whisperCommand = whisperCommandInput.value;
-        if (whisperModelInput) settings.whisperModel = whisperModelInput.value;
-        if (whisperLanguageInput) settings.whisperLanguage = whisperLanguageInput.value;
-        if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
-
-        window.api.send('save-settings', settings);
-    };
-
-    const updateSpeechFieldStates = () => {
-        const provider = speechProviderSelect ? speechProviderSelect.value : 'azure';
-        const azureDisabled = provider !== 'azure';
-        const whisperDisabled = provider !== 'whisper';
-
-        [azureKeyInput, azureRegionInput].forEach(input => {
-            if (input) input.disabled = azureDisabled;
-        });
-
-        [whisperCommandInput, whisperModelInput, whisperLanguageInput, whisperSegmentMsInput].forEach(input => {
-            if (input) input.disabled = whisperDisabled;
-        });
-    };
-
-    // Add event listeners for all inputs
-    const inputs = [
-        speechProviderSelect,
-        azureKeyInput,
-        azureRegionInput,
-        whisperCommandInput,
-        whisperModelInput,
-        whisperLanguageInput,
-        whisperSegmentMsInput
-    ];
-
-    inputs.forEach(input => {
-        if (input) {
-            input.addEventListener('change', saveSettings);
-            input.addEventListener('blur', saveSettings);
+        } catch (e) {
+            console.error('[Settings] Failed to load settings:', e);
         }
-    });
+    };
 
-    if (speechProviderSelect) {
-        speechProviderSelect.addEventListener('change', () => {
-            updateSpeechFieldStates();
-            saveSettings();
-        });
-    }
-
-    // Language selection handler
     if (codingLanguageSelect) {
         codingLanguageSelect.addEventListener('change', (e) => {
-            const lang = e.target.value;
-            // use emptyAPI so main broadcast is consistent
-            if (window.emptyAPI && window.emptyAPI.saveSettings) {
-                window.emptyAPI.saveSettings({ codingLanguage: lang });
-            } else {
-                // fallback
-                saveSettings();
+            window.emptyAPI.saveSettings({ codingLanguage: e.target.value });
+        });
+    }
+
+    // Sync language when another window changes it
+    window.emptyAPI.onCodingLanguageChanged((event, data) => {
+        if (data && data.language && codingLanguageSelect) {
+            codingLanguageSelect.value = data.language;
+        }
+    });
+
+    // Reload when settings window is shown
+    window.emptyAPI.receive('settings-window-shown', loadSettings);
+
+    // ── Context Files ─────────────────────────────────────────────────────────
+
+    const formatBytes = (bytes) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    };
+
+    const renderContextFiles = (files) => {
+        contextFilesList.innerHTML = '';
+
+        if (!files || !files.length) {
+            noContextFilesMsg.style.display = 'block';
+            contextFooter.style.display = 'none';
+            return;
+        }
+
+        noContextFilesMsg.style.display = 'none';
+        contextFooter.style.display = 'flex';
+
+        files.forEach((file) => {
+            const item = document.createElement('div');
+            item.className = 'context-file-item';
+
+            const info = document.createElement('div');
+            info.className = 'context-file-info';
+
+            const name = document.createElement('span');
+            name.className = 'context-file-name';
+            name.textContent = file.name;
+            name.title = file.path;
+
+            const size = document.createElement('span');
+            size.className = 'context-file-size';
+            size.textContent = formatBytes(file.size);
+
+            info.appendChild(name);
+            info.appendChild(size);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-danger';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.title = 'Remove';
+            removeBtn.addEventListener('click', async () => {
+                const result = await window.emptyAPI.removeContextFile(file.path);
+                renderContextFiles(result.files);
+            });
+
+            item.appendChild(info);
+            item.appendChild(removeBtn);
+            contextFilesList.appendChild(item);
+        });
+    };
+
+    const refreshContextFiles = async () => {
+        const result = await window.emptyAPI.getContextFiles();
+        renderContextFiles(result.files);
+    };
+
+    // Add File
+    if (addFileBtn) {
+        addFileBtn.addEventListener('click', async () => {
+            const result = await window.emptyAPI.selectContextFiles();
+            if (result.success) {
+                await refreshContextFiles();
             }
         });
     }
 
-    updateSpeechFieldStates();
-
-    // Initialize icon grid with correct paths
-    const initializeIconGrid = () => {
-        if (!iconGrid) return;
-
-        const icons = [
-            { key: 'terminal', name: 'Terminal', src: './assests/icons/terminal.png' },
-            { key: 'activity', name: 'Activity', src: './assests/icons/activity.png' },
-            { key: 'settings', name: 'Settings', src: './assests/icons/settings.png' }
-        ];
-
-        iconGrid.innerHTML = '';
-
-        icons.forEach(icon => {
-            const iconElement = document.createElement('div');
-            iconElement.className = 'icon-option';
-            iconElement.dataset.icon = icon.key;
-            
-            const img = document.createElement('img');
-            img.src = icon.src;
-            img.alt = icon.name;
-            img.onload = () => {
-                logger.info('Icon loaded successfully:', icon.src);
-            };
-            img.onerror = () => {
-                console.error('Failed to load icon:', icon.src);
-                // Try alternative paths
-                const altPaths = [
-                    `./assests/${icon.key}.png`,
-                    `./assets/icons/${icon.key}.png`,
-                    `./assets/${icon.key}.png`
-                ];
-                
-                let pathIndex = 0;
-                const tryNextPath = () => {
-                    if (pathIndex < altPaths.length) {
-                        img.src = altPaths[pathIndex];
-                        pathIndex++;
-                    } else {
-                        img.style.display = 'none';
-                        console.error('All icon paths failed for:', icon.key);
-                    }
-                };
-                
-                img.onload = () => {
-                    logger.info('Icon loaded with alternative path:', img.src);
-                };
-                
-                img.onerror = tryNextPath;
-                tryNextPath();
-            };
-            
-            const label = document.createElement('div');
-            label.textContent = icon.name;
-            
-            iconElement.appendChild(img);
-            iconElement.appendChild(label);
-            
-            // Click handler for icon selection
-            iconElement.addEventListener('click', () => {                
-                // Remove selection from all icons
-                iconGrid.querySelectorAll('.icon-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                
-                // Add selection to clicked icon
-                iconElement.classList.add('selected');
-                
-                // Save the selection - this should trigger the app icon change
-                window.api.send('save-settings', { selectedIcon: icon.key });
-                
-                // Show visual feedback
-                iconElement.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    iconElement.style.transform = 'scale(1)';
-                }, 100);
-            });
-            
-            iconGrid.appendChild(iconElement);
+    // Clear All
+    if (clearContextBtn) {
+        clearContextBtn.addEventListener('click', async () => {
+            await window.emptyAPI.clearContextFiles();
+            renderContextFiles([]);
         });
-    };
+    }
 
-    // Initialize icon grid
-    initializeIconGrid();
-
-    // Request settings on load
-    setTimeout(() => {
-        requestCurrentSettings();
-    }, 200);
-
-    // ESC key to close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            window.api.send('close-settings');
-        }
+    // Listen for changes from other sources (e.g. another window)
+    window.emptyAPI.onContextFilesChanged((event, data) => {
+        renderContextFiles(data.files);
     });
-}); 
+
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSettings();
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    loadSettings();
+    refreshContextFiles();
+});

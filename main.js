@@ -30,7 +30,8 @@ class ApplicationController {
   constructor() {
     this.isReady = false;
     this.activeSkill = "general";
-    this.codingLanguage = "cpp";
+    this.codingLanguage = "none";
+    this.contextFiles = []; // { path, name, content, size }
     this.dockHideTimer = null;
 
     // Window configurations for reference
@@ -410,7 +411,7 @@ class ApplicationController {
       logger.debug('Chat message added to session memory', { textLength: text.length });
 
       // Process typed chat input using the text-specific LLM path
-      setTimeout(async () => {
+      setImmediate(async () => {
         try {
           const sessionHistory = sessionManager.getOptimizedHistory();
           await this.processWithLLM(text, sessionHistory);
@@ -421,7 +422,7 @@ class ApplicationController {
           });
           this.broadcastLLMError(`Error processing chat message: ${error.message}`);
         }
-      }, 500);
+      });
 
       return { success: true };
     });
@@ -557,6 +558,104 @@ class ApplicationController {
       // Use the same expansion logic for now, can be enhanced later
       windowManager.expandLLMWindow(contentMetrics);
       return { success: true, contentMetrics };
+    });
+
+    // Context files handlers
+    ipcMain.handle("select-context-files", async () => {
+      const { dialog } = require("electron");
+      const fs = require("fs");
+      const path = require("path");
+
+      const result = await dialog.showOpenDialog({
+        properties: ["openFile", "multiSelections"],
+        filters: [
+          {
+            name: "Text / Code Files",
+            extensions: ["txt", "md", "js", "ts", "jsx", "tsx", "py", "java", "cpp", "c", "h", "hpp", "css", "html", "json", "yaml", "yml", "xml", "sh", "go", "rs", "rb", "php", "swift", "kt", "cs", "sql", "env", "toml", "ini", "cfg"]
+          },
+          { name: "All Files", extensions: ["*"] }
+        ]
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, files: [] };
+      }
+
+      for (const filePath of result.filePaths) {
+        if (this.contextFiles.find(f => f.path === filePath)) continue;
+        try {
+          const content = fs.readFileSync(filePath, "utf-8");
+          const name = path.basename(filePath);
+          this.contextFiles.push({ path: filePath, name, content, size: content.length });
+        } catch (err) {
+          logger.warn("Failed to read context file", { path: filePath, error: err.message });
+        }
+      }
+
+      const info = this.getContextFilesInfo();
+      windowManager.broadcastToAllWindows("context-files-changed", info);
+      return { success: true, files: info.files };
+    });
+
+    ipcMain.handle("select-context-folder", async () => {
+      const { dialog } = require("electron");
+      const fs = require("fs");
+      const path = require("path");
+
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory"]
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, files: [] };
+      }
+
+      const folderPath = result.filePaths[0];
+      const textExts = new Set([".txt", ".md", ".js", ".ts", ".jsx", ".tsx", ".py", ".java", ".cpp", ".c", ".h", ".hpp", ".css", ".html", ".json", ".yaml", ".yml", ".xml", ".sh", ".go", ".rs", ".rb", ".php", ".swift", ".kt", ".cs", ".sql", ".toml", ".ini", ".cfg"]);
+
+      const readDir = (dirPath, depth = 0) => {
+        if (depth > 3) return;
+        let entries;
+        try { entries = fs.readdirSync(dirPath, { withFileTypes: true }); } catch { return; }
+        for (const entry of entries) {
+          if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist" || entry.name === ".git") continue;
+          const fullPath = path.join(dirPath, entry.name);
+          if (entry.isDirectory()) {
+            readDir(fullPath, depth + 1);
+          } else if (entry.isFile() && textExts.has(path.extname(entry.name).toLowerCase())) {
+            if (this.contextFiles.find(f => f.path === fullPath)) continue;
+            try {
+              const content = fs.readFileSync(fullPath, "utf-8");
+              if (content.length > 500000) continue; // skip very large files
+              const name = path.relative(folderPath, fullPath);
+              this.contextFiles.push({ path: fullPath, name, content, size: content.length });
+            } catch { /* skip unreadable */ }
+          }
+        }
+      };
+
+      readDir(folderPath);
+
+      const info = this.getContextFilesInfo();
+      windowManager.broadcastToAllWindows("context-files-changed", info);
+      return { success: true, files: info.files };
+    });
+
+    ipcMain.handle("get-context-files", () => {
+      return this.getContextFilesInfo();
+    });
+
+    ipcMain.handle("remove-context-file", (event, filePath) => {
+      this.contextFiles = this.contextFiles.filter(f => f.path !== filePath);
+      const info = this.getContextFilesInfo();
+      windowManager.broadcastToAllWindows("context-files-changed", info);
+      return info;
+    });
+
+    ipcMain.handle("clear-context-files", () => {
+      this.contextFiles = [];
+      windowManager.broadcastToAllWindows("context-files-changed", this.getContextFilesInfo());
+      return { success: true };
     });
 
     ipcMain.handle("quit-app", () => {
@@ -762,13 +861,16 @@ class ApplicationController {
 
       const skillsRequiringProgrammingLanguage = ['dsa'];
       const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
+      const langForLLM = needsProgrammingLanguage && this.codingLanguage && this.codingLanguage !== 'none'
+        ? this.codingLanguage : null;
 
       const llmResult = await llmService.processImageWithSkill(
         capture.imageBuffer,
         capture.mimeType || 'image/png',
         this.activeSkill,
         sessionHistory.recent,
-        needsProgrammingLanguage ? this.codingLanguage : null
+        langForLLM,
+        this.buildContextContent()
       );
 
       // Record model response in session
@@ -821,12 +923,15 @@ class ApplicationController {
       // Check if current skill needs programming language context (only DSA for now)
       const skillsRequiringProgrammingLanguage = ['dsa'];
       const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
-      
+      const langForLLM = needsProgrammingLanguage && this.codingLanguage && this.codingLanguage !== 'none'
+        ? this.codingLanguage : null;
+
       const llmResult = await llmService.processTextWithSkill(
         text,
         this.activeSkill,
         sessionHistory.recent,
-        needsProgrammingLanguage ? this.codingLanguage : null
+        langForLLM,
+        this.buildContextContent()
       );
 
       logger.info("LLM processing completed, showing response", {
@@ -1034,8 +1139,8 @@ class ApplicationController {
 
   getSettings() {
     return {
-      codingLanguage: this.codingLanguage || "cpp", // Default to C++
-      activeSkill: this.activeSkill || "dsa",
+      codingLanguage: this.codingLanguage || "none",
+      activeSkill: this.activeSkill || "general",
       appIcon: this.appIcon || "terminal",
       selectedIcon: this.appIcon || "terminal"
     };
@@ -1084,6 +1189,21 @@ class ApplicationController {
     // You can extend this to save to a file or database
     // For now, we'll just keep them in memory
     logger.debug("Settings persisted", settings);
+  }
+
+  getContextFilesInfo() {
+    return {
+      files: this.contextFiles.map(f => ({ path: f.path, name: f.name, size: f.size })),
+      totalSize: this.contextFiles.reduce((sum, f) => sum + f.size, 0)
+    };
+  }
+
+  buildContextContent() {
+    if (!this.contextFiles || !this.contextFiles.length) return null;
+    const parts = this.contextFiles.map(f =>
+      `--- File: ${f.name} ---\n${f.content}\n--- End of ${f.name} ---`
+    );
+    return `The following context files have been provided for this conversation:\n\n${parts.join("\n\n")}`;
   }
 
   updateAppIcon(iconKey) {

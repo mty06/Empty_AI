@@ -52,8 +52,8 @@ class WindowManager {
         alwaysOnTop: true
       },
       settings: {
-        width: 400,
-        height: 380,
+        width: 420,
+        height: 500,
         file: 'src/ui/views/settings.html',
         title: 'Settings',
         frame: false,
@@ -247,6 +247,7 @@ class WindowManager {
         closable: false,
         hasShadow: false,
         backgroundColor: '#00000000',
+        focusable: true, // needs focus so the × button and ESC key work
         level: process.platform === 'darwin' ? 'floating' : undefined,
         // Additional macOS flags for better always-on-top behavior
         ...(process.platform === 'darwin' && {
@@ -588,32 +589,25 @@ class WindowManager {
     
     // Event-based enforcement
     window.on('blur', () => {
-      setTimeout(enforceAlwaysOnTop, 50);
-      setTimeout(enforceAlwaysOnTop, 200);
-      setTimeout(enforceAlwaysOnTop, 500);
+      setTimeout(enforceAlwaysOnTop, 100);
     });
-    
+
     window.on('show', () => {
-      setTimeout(enforceAlwaysOnTop, 50);
-      setTimeout(enforceAlwaysOnTop, 200);
+      setTimeout(enforceAlwaysOnTop, 100);
     });
-    
-    window.on('focus', () => {
-      setTimeout(enforceAlwaysOnTop, 50);
-    });
-    
+
     window.on('restore', () => {
-      setTimeout(enforceAlwaysOnTop, 50);
+      setTimeout(enforceAlwaysOnTop, 100);
     });
     
-    // Periodic enforcement every 3 seconds (more frequent)
+    // Periodic enforcement every 15 seconds
     const periodicEnforcement = setInterval(() => {
       if (window.isDestroyed()) {
         clearInterval(periodicEnforcement);
         return;
       }
       enforceAlwaysOnTop();
-    }, 3000);
+    }, 15000);
     
     logger.debug('Applied enhanced stealth measures with aggressive always-on-top', {
       type,

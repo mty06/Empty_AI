@@ -66,7 +66,15 @@ contextBridge.exposeInMainWorld('emptyAPI', {
   // Display management
   listDisplays: () => ipcRenderer.invoke('list-displays'),
   captureArea: (options) => ipcRenderer.invoke('capture-area', options),
-  
+
+  // Context files
+  selectContextFiles: () => ipcRenderer.invoke('select-context-files'),
+  selectContextFolder: () => ipcRenderer.invoke('select-context-folder'),
+  getContextFiles: () => ipcRenderer.invoke('get-context-files'),
+  removeContextFile: (filePath) => ipcRenderer.invoke('remove-context-file', filePath),
+  clearContextFiles: () => ipcRenderer.invoke('clear-context-files'),
+  onContextFilesChanged: (callback) => ipcRenderer.on('context-files-changed', callback),
+
   // Event listeners
   // Speech event listeners removed
   onSessionEvent: (callback) => ipcRenderer.on('session-event', callback),
@@ -85,7 +93,8 @@ contextBridge.exposeInMainWorld('emptyAPI', {
   onRecordingStopped: (callback) => ipcRenderer.on('recording-stopped', callback),
   onCodingLanguageChanged: (callback) => ipcRenderer.on('coding-language-changed', callback),
   
-  // Generic receive method
+  getSpeechAvailability: () => Promise.resolve(false),
+
   receive: (channel, callback) => ipcRenderer.on(channel, callback),
   
   // Remove listeners

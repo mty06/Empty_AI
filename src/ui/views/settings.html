@@ -67,7 +67,6 @@
             padding: 20px;
             overflow-y: auto;
             color: rgba(255, 255, 255, 0.9);
-            max-height: calc(100vh - 70px);
         }
 
         .settings-section {
@@ -101,7 +100,7 @@
             margin-bottom: 12px;
             padding: 8px;
             border-radius: 6px;
-            transition: all 0.2s ease;
+            transition: background 0.2s ease;
         }
 
         .settings-item:last-child {
@@ -142,13 +141,19 @@
         }
 
         .btn.btn-danger {
-            background: rgba(244, 67, 54, 0.8);
+            background: rgba(244, 67, 54, 0.6);
+            padding: 4px 8px;
+            font-size: 11px;
         }
 
         .btn.btn-danger:hover {
-            background: rgba(244, 67, 54, 1);
+            background: rgba(244, 67, 54, 0.9);
         }
 
+        .btn.btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
 
         .input-field {
             background: rgba(255, 255, 255, 0.1);
@@ -164,71 +169,6 @@
         .input-field:focus {
             outline: none;
             border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        /* Stealth scrollbar */
-        ::-webkit-scrollbar {
-            width: 2px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 1px;
-        }
-
-        /* Feedback notification styling */
-        #tempFeedback {
-            font-size: 10px !important;
-            padding: 6px 10px !important;
-            background: rgba(0, 0, 0, 0.8) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            backdrop-filter: blur(5px) !important;
-        }
-
-        /* Additional styles for new sections */
-        .icon-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .icon-option {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 12px 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .icon-option:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .icon-option.selected {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .icon-option img {
-            width: 32px;
-            height: 32px;
-            margin-bottom: 8px;
-            object-fit: contain;
-        }
-
-        .icon-option div {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.8);
         }
 
         select.input-field {
@@ -247,21 +187,82 @@
             padding: 8px;
         }
 
-        .settings-stack {
+        /* Context files list */
+        .context-files-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .context-file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            gap: 8px;
+        }
+
+        .context-file-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .context-file-info {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            width: 100%;
+            min-width: 0;
+            flex: 1;
         }
 
-        .settings-note {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.65);
-            line-height: 1.4;
-        }
-
-        .settings-note code {
+        .context-file-name {
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.9);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .context-file-size {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 2px;
+        }
+
+        .context-files-list {
+            margin-top: 10px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .context-empty-msg {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.35);
+            text-align: center;
+            padding: 8px 0;
+            margin-top: 8px;
+        }
+
+        .context-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+
+        /* Stealth scrollbar */
+        ::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 1px;
         }
     </style>
 </head>
@@ -273,10 +274,12 @@
                 Settings
             </div>
             <div class="header-actions">
+<button id="closeSettingsBtn" title="Close" style="background:none;border:none;color:rgba(255,255,255,0.45);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;transition:color 0.15s,background 0.15s;-webkit-app-region:no-drag;" onmouseover="this.style.color='rgba(255,255,255,0.9)';this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='rgba(255,255,255,0.45)';this.style.background='none'">&#x2715;</button>
             </div>
         </div>
-        
+
         <div class="settings-content">
+            <!-- Language & Skills -->
             <div class="settings-section">
                 <div class="settings-section-title">
                     <i class="fas fa-code"></i>
@@ -286,9 +289,10 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Coding Language</div>
-                            <div class="settings-item-description">Select your preferred programming language</div>
+                            <div class="settings-item-description">Select language for code responses, or None for regular answers</div>
                         </div>
                         <select class="input-field" id="codingLanguage">
+                            <option value="none">None (Regular)</option>
                             <option value="cpp">C++</option>
                             <option value="c">C</option>
                             <option value="python">Python</option>
@@ -299,34 +303,36 @@
                 </div>
             </div>
 
+            <!-- Context Files -->
             <div class="settings-section">
                 <div class="settings-section-title">
-                    <i class="fas fa-icons"></i>
-                    App Icon
+                    <i class="fas fa-file-code"></i>
+                    Files
                 </div>
                 <div class="settings-section-content">
-                    <div class="icon-grid" id="iconGrid">
-                        <div class="icon-option" data-icon="terminal">
-                            <img src="../../../public/assets/icons/terminal.png" alt="Terminal">
-                            <div>Terminal</div>
+                    <div class="settings-item">
+                        <div>
+                            <div class="settings-item-label">Add files or folders</div>
+                            <div class="settings-item-description">Content will be included as context in upcoming chats</div>
                         </div>
-                        <div class="icon-option" data-icon="activity">
-                            <img src="../../../public/assets/icons/activity.png" alt="Activity">
-                            <div>Activity</div>
+                        <div class="context-files-actions">
+                            <button class="btn btn-sm" id="addFileBtn">
+                                <i class="fas fa-file-plus"></i> File
+                            </button>
                         </div>
-                        <div class="icon-option" data-icon="settings">
-                            <img src="../../../public/assets/icons/settings.png" alt="Settings">
-                            <div>Settings</div>
-                        </div>
+                    </div>
+                    <div class="context-files-list" id="contextFilesList"></div>
+                    <div class="context-empty-msg" id="noContextFilesMsg">No context files added</div>
+                    <div class="context-footer" id="contextFooter" style="display:none;">
+                        <button class="btn btn-danger btn-sm" id="clearContextBtn">
+                            <i class="fas fa-trash"></i> Clear All
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Speech Recognition section removed -->
-
         </div>
     </div>
 
-    <script src="./src/ui/settings-window.js"></script>
+    <script src="../controllers/settings-window.js"></script>
 </body>
 </html>

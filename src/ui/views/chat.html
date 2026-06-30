@@ -21,12 +21,7 @@
       .chat-container {
         width: 100%;
         height: 100vh;
-        background: linear-gradient(
-          135deg,
-          rgba(0, 0, 0, 0.3) 0%,
-          rgba(20, 20, 20, 0.4) 100%
-        );
-        backdrop-filter: blur(25px);
+        background: rgba(10, 10, 10, 0.85);
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
@@ -41,8 +36,7 @@
         align-items: center;
         justify-content: space-between;
         -webkit-app-region: drag;
-        background: rgba(0, 0, 0, 0.2);
-        backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.3);
         cursor: move;
         flex-shrink: 0;
       }
@@ -55,12 +49,34 @@
         gap: 8px;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        -webkit-app-region: no-drag;
+      }
       /* Header actions (e.g., Clear History) */
       .header-actions {
         -webkit-app-region: no-drag;
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+      .back-button {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 5px;
+        transition: color 0.15s ease, background 0.15s ease;
+        -webkit-app-region: no-drag;
+        line-height: 1;
+      }
+      .back-button:hover {
+        color: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.08);
       }
       .icon-button {
         background: rgba(255, 255, 255, 0.12);
@@ -83,7 +99,8 @@
         overflow-x: hidden;
         -webkit-app-region: no-drag;
         box-sizing: border-box;
-        /* Removed max-height restriction */
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
       }
       .message {
         margin-bottom: 16px;
@@ -91,7 +108,6 @@
         background: rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         border-left: 3px solid rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(5px);
         word-wrap: break-word;
         word-break: break-word;
         /* Removed all height restrictions */
@@ -367,8 +383,7 @@
         padding: 16px 20px;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         -webkit-app-region: no-drag;
-        background: rgba(0, 0, 0, 0.2);
-        backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.3);
         flex-shrink: 0;
       }
       .input-container {
@@ -505,8 +520,11 @@
   <body>
     <div class="chat-container" id="chatContainer">
       <div class="chat-header">
-        <div class="header-title">
-          Chat & AI Response
+        <div class="header-left">
+          <button class="back-button" id="openSettingsBtn" title="Back to Settings">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="header-title">Chat & AI Response</div>
         </div>
         <div class="header-actions">
           <button class="icon-button" id="clearHistoryBtn" title="Clear chat history">
@@ -551,6 +569,10 @@
 
       let isRecording = false;
       let isInteractive = true;
+
+      function scrollToBottom(instant = false) {
+        chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: instant ? 'instant' : 'smooth' });
+      }
       // let listeningStartTime = null;
       // let listeningTimer = null;
       // let speechAvailable = false;
@@ -574,12 +596,16 @@
         }
       }
 
+      let _saveHistoryTimer = null;
       function saveHistory() {
-        try {
-          localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory.slice(-500)));
-        } catch (e) {
-          console.warn('Failed to save history', e);
-        }
+        clearTimeout(_saveHistoryTimer);
+        _saveHistoryTimer = setTimeout(() => {
+          try {
+            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory.slice(-500)));
+          } catch (e) {
+            console.warn('Failed to save history', e);
+          }
+        }, 500);
       }
 
       function loadHistory() {
@@ -672,7 +698,7 @@
         messageDiv.appendChild(textDiv);
 
         chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        scrollToBottom(skipPersist);
 
         if (!skipPersist) {
           chatHistory.push({ kind: 'message', type, text });
@@ -719,7 +745,7 @@
         thinkingDiv.appendChild(textDiv);
 
         chatMessages.appendChild(thinkingDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        scrollToBottom();
       }
 
       // Hide thinking indicator
@@ -824,7 +850,7 @@
         messageDiv.appendChild(timeDiv);
         messageDiv.appendChild(textDiv);
         chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        scrollToBottom(skipPersist);
 
         try { if (window.Prism && Prism.highlightElement) { Prism.highlightElement(codeEl); } } catch (_) {}
 
@@ -889,6 +915,13 @@
       }
 
       // UI Event Listeners
+      const openSettingsBtn = document.getElementById('openSettingsBtn');
+      if (openSettingsBtn) {
+        openSettingsBtn.addEventListener('click', () => {
+          if (whysperAPI && whysperAPI.showSettings) whysperAPI.showSettings();
+        });
+      }
+
       if (clearHistoryBtn) {
         clearHistoryBtn.addEventListener('click', () => clearChatHistory());
       }
@@ -899,11 +932,7 @@
           if (text) {
             addMessage(text, 'user');
             messageInput.value = '';
-
-            // Show thinking indicator after user message
-            setTimeout(() => {
-              showThinkingIndicator();
-            }, 300);
+            showThinkingIndicator();
 
             // Send to main process for session memory storage and LLM processing
             try {
@@ -939,7 +968,7 @@
               addMessage(text, 'user');
               messageInput.value = '';
               autoGrow(messageInput);
-              setTimeout(() => { showThinkingIndicator(); }, 300);
+              showThinkingIndicator();
               try {
                 if (whysperAPI && whysperAPI.sendChatMessage) {
                   await whysperAPI.sendChatMessage(text);
@@ -952,8 +981,6 @@
         });
       }
 
-      // Initialize chat
-      loadHistory();
       if (!chatHistory || chatHistory.length === 0) {
         addMessage('Chat window ready. Type your message and press Enter!', 'system');
       }
