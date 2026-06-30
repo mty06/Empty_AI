@@ -10,18 +10,28 @@ class LLMService {
     this.isInitialized = false;
     this.requestCount = 0;
     this.errorCount = 0;
+    this.lastInitError = null;
     
     this.initializeClient();
   }
 
   initializeClient() {
+    // Ensure .env has been loaded regardless of import order.
+    try {
+      require('dotenv').config();
+    } catch (error) {
+      logger.warn('Failed to load .env from LLM service', { error: error.message });
+    }
+
     const apiKey = config.getApiKey('GEMINI');
     
     if (!apiKey || apiKey === 'your-api-key-here') {
-      logger.warn('Gemini API key not configured', { 
+      this.lastInitError = 'Gemini API key not configured';
+      logger.warn(this.lastInitError, { 
         keyExists: !!apiKey,
         isPlaceholder: apiKey === 'your-api-key-here'
       });
+      this.isInitialized = false;
       return;
     }
 
@@ -35,11 +45,14 @@ class LLMService {
         generationConfig: this.getGenerationConfig()
       });
       this.isInitialized = true;
+      this.lastInitError = null;
       
       logger.info('Gemini AI client initialized successfully', {
         model: modelName
       });
     } catch (error) {
+      this.isInitialized = false;
+      this.lastInitError = error.message;
       logger.error('Failed to initialize Gemini client', { 
         error: error.message 
       });
@@ -115,9 +128,21 @@ class LLMService {
    * @param {string|null} programmingLanguage - optional language context for skills that need it
    * @returns {Promise<{response: string, metadata: object}>}
    */
+  async ensureClientInitialized() {
+    if (this.isInitialized && this.model) {
+      return true;
+    }
+
+    logger.warn('LLM client not initialized; retrying initialization');
+    this.initializeClient();
+
+    return this.isInitialized && !!this.model;
+  }
+
   async processImageWithSkill(imageBuffer, mimeType, activeSkill, sessionMemory = [], programmingLanguage = null) {
-    if (!this.isInitialized) {
-      throw new Error('LLM service not initialized. Check Gemini API key configuration.');
+    const clientReady = await this.ensureClientInitialized();
+    if (!clientReady) {
+      throw new Error(`LLM service not initialized. Check Gemini API key configuration. ${this.lastInitError || ''}`);
     }
 
     if (!imageBuffer || !Buffer.isBuffer(imageBuffer)) {
@@ -128,9 +153,8 @@ class LLMService {
     this.requestCount++;
 
     try {
-      // Build system instruction using the skill prompt (with optional language injection)
-      const { promptLoader } = require('../utils/prompt-loader');
-      const skillPrompt = promptLoader.getSkillPrompt(activeSkill, programmingLanguage) || '';
+      // Build a compact system instruction to keep screenshot analysis fast
+      const compactSkillPrompt = this.getCompactSkillPrompt(activeSkill, programmingLanguage);
 
       // Build request with text + image parts
       const base64 = imageBuffer.toString('base64');
@@ -149,8 +173,8 @@ class LLMService {
 
       this.applyGenerationDefaults(request);
 
-      if (skillPrompt && skillPrompt.trim().length > 0) {
-        request.systemInstruction = { parts: [{ text: skillPrompt }] };
+      if (compactSkillPrompt && compactSkillPrompt.trim().length > 0) {
+        request.systemInstruction = { parts: [{ text: compactSkillPrompt }] };
       }
 
       // Execute with retries/timeout - try alternative method first for network reliability
@@ -219,14 +243,32 @@ class LLMService {
     }
   }
 
+  getCompactSkillPrompt(activeSkill, programmingLanguage = null) {
+    const { promptLoader } = require('../utils/prompt-loader');
+    const basePrompt = promptLoader.getSkillPrompt(activeSkill, programmingLanguage) || '';
+
+    if (!basePrompt || !basePrompt.trim()) {
+      return '';
+    }
+
+    const langNote = programmingLanguage ? ` Use ${programmingLanguage.toUpperCase()} for code.` : '';
+
+    if (activeSkill === 'dsa') {
+      return `You are helping with a ${activeSkill.toUpperCase()} problem. Give a concise explanation and a short solution or code snippet when useful.${langNote}`;
+    }
+
+    return `You are helping with ${activeSkill.toUpperCase()}. Provide a concise, useful answer with the most relevant details.${langNote}`;
+  }
+
   formatImageInstruction(activeSkill, programmingLanguage) {
     const langNote = programmingLanguage ? ` Use only ${programmingLanguage.toUpperCase()} for any code.` : '';
-    return `Analyze this image for a ${activeSkill.toUpperCase()} question. Extract the problem concisely and provide the best possible solution with explanation and final code.${langNote}`;
+    return `Analyze this screenshot briefly for a ${activeSkill.toUpperCase()} question. Extract the core problem and respond with a concise explanation and minimal code if needed.${langNote}`;
   }
 
   async processTextWithSkill(text, activeSkill, sessionMemory = [], programmingLanguage = null) {
-    if (!this.isInitialized) {
-      throw new Error('LLM service not initialized. Check Gemini API key configuration.');
+    const clientReady = await this.ensureClientInitialized();
+    if (!clientReady) {
+      throw new Error(`LLM service not initialized. Check Gemini API key configuration. ${this.lastInitError || ''}`);
     }
 
     const startTime = Date.now();
@@ -252,11 +294,18 @@ class LLMService {
         systemInstruction: { parts: [{ text: systemPrompt }] }
       });
 
-      if (!result.response) {
+      const response = result?.response;
+      const responseText = response
+        ? typeof response.text === 'function'
+          ? response.text()
+          : typeof response.text === 'string'
+            ? response.text
+            : null
+        : null;
+
+      if (!responseText || !responseText.trim()) {
         throw new Error('Empty response from Gemini');
       }
-
-      const responseText = result.response.text();
 
       logger.info('Gemini response received', {
         textLength: text.length,
@@ -284,10 +333,11 @@ class LLMService {
     this.requestCount++;
 
     try {
-      // Validate model
-      if (!this.isInitialized || !this.model) {
+      // Validate model and retry initialization if necessary
+      const clientReady = await this.ensureClientInitialized();
+      if (!clientReady) {
         return {
-          response: 'AI service not ready. Please check your API key.',
+          response: `AI service not ready. Please check your API key. ${this.lastInitError || ''}`,
           metadata: {
             skill: activeSkill,
             processingTime: Date.now() - startTime,
@@ -315,8 +365,16 @@ class LLMService {
         systemInstruction: { parts: [{ text: systemPrompt }] }
       });
 
-      // Extract response
-      if (!result.response || !result.response.text) {
+      const response = result?.response;
+      const responseText = response
+        ? typeof response.text === 'function'
+          ? response.text()
+          : typeof response.text === 'string'
+            ? response.text
+            : null
+        : null;
+
+      if (!responseText || !responseText.trim()) {
         return {
           response: 'No response from AI. Please try again.',
           metadata: {
@@ -328,8 +386,6 @@ class LLMService {
           }
         };
       }
-
-      const responseText = result.response.text();
 
       return {
         response: responseText,
@@ -771,6 +827,10 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
   }
 
   async performPreflightCheck() {
+    if (config.get('llm.gemini.skipPreflightCheck')) {
+      return;
+    }
+
     // Quick connectivity check
     try {
       const startTime = Date.now();

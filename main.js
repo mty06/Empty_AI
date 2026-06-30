@@ -80,7 +80,7 @@ class ApplicationController {
 
     this.dockHideTimer = setInterval(() => {
       this.enforceDockHiding();
-    }, 2000);
+    }, 300);
   }
 
   enforceDockHiding() {
@@ -111,6 +111,12 @@ class ApplicationController {
       this.onActivate();
     });
     app.on("will-quit", () => this.onWillQuit());
+
+    // Hide dock immediately whenever any window gains focus — this is what causes the 2s flash
+    if (process.platform === "darwin") {
+      app.on("browser-window-focus", () => this.enforceDockHiding());
+      app.on("browser-window-created", () => this.enforceDockHiding());
+    }
 
     this.setupIPCHandlers();
     this.setupServiceEventHandlers();
@@ -150,7 +156,6 @@ class ApplicationController {
   }
 
   async onAppReady() {
-    // Force stealth mode IMMEDIATELY when app is ready
     app.setName("Terminal ");
     process.title = "Terminal ";
 
@@ -404,16 +409,17 @@ class ApplicationController {
       sessionManager.addUserInput(text, 'chat');
       logger.debug('Chat message added to session memory', { textLength: text.length });
 
-      // Process typed message with LLM in the same way as transcribed text
+      // Process typed chat input using the text-specific LLM path
       setTimeout(async () => {
         try {
           const sessionHistory = sessionManager.getOptimizedHistory();
-          await this.processTranscriptionWithLLM(text, sessionHistory);
+          await this.processWithLLM(text, sessionHistory);
         } catch (error) {
           logger.error("Failed to process chat message with LLM", {
             error: error.message,
-            text: text.substring(0, 100)
+            text: text ? text.substring(0, 100) : ''
           });
+          this.broadcastLLMError(`Error processing chat message: ${error.message}`);
         }
       }, 500);
 
@@ -808,8 +814,9 @@ class ApplicationController {
 
   async processWithLLM(text, sessionHistory) {
     try {
-      // Add user input to session memory
-      sessionManager.addUserInput(text, 'llm_input');
+      // The typed chat message is already stored by send-chat-message.
+      // This method focuses on executing the LLM request and broadcasting the result.
+      logger.info('Processing typed chat input with Gemini', { textLength: text.length });
 
       // Check if current skill needs programming language context (only DSA for now)
       const skillsRequiringProgrammingLanguage = ['dsa'];

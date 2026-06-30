@@ -16,7 +16,9 @@
     "clean": "rm -rf dist/",
     "rebuild": "npm run clean && npm run build",
     "release": "npm run clean && npm run build:all",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "predev": "node scripts/patch-electron.js",
+    "patch-electron": "node scripts/patch-electron.js"
   },
   "author": {
     "name": "empty06"
@@ -39,7 +41,8 @@
   "devDependencies": {
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
-    "electron-reloader": "^1.2.3"
+    "electron-reloader": "^1.2.3",
+    "playwright": "^1.61.1"
   },
   "build": {
     "appId": "com.opencluely.app",

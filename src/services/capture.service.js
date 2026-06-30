@@ -44,15 +44,17 @@ class CaptureService {
         }
       }
 
-      const buffer = finalImage.toPNG();
+      const optimizedImage = this.optimizeForAnalysis(finalImage);
+      const compressionResult = this.compressForAnalysis(optimizedImage);
       logger.logPerformance('Screenshot capture', startTime, {
-        bytes: buffer.length,
-        dimensions: finalImage.getSize()
+        bytes: compressionResult.buffer.length,
+        dimensions: optimizedImage.getSize(),
+        mimeType: compressionResult.mimeType
       });
 
       return {
-        imageBuffer: buffer,
-        mimeType: 'image/png',
+        imageBuffer: compressionResult.buffer,
+        mimeType: compressionResult.mimeType,
         metadata: {
           timestamp: new Date().toISOString(),
           source: metadata,
@@ -102,6 +104,38 @@ class CaptureService {
         captureTime: new Date().toISOString()
       }
     };
+  }
+
+  optimizeForAnalysis(image) {
+    try {
+      const { width, height } = image.getSize();
+      const maxDimension = 1280;
+      const needsResize = width > maxDimension || height > maxDimension;
+
+      if (!needsResize) {
+        return image;
+      }
+
+      const scale = Math.min(1, maxDimension / Math.max(width, height));
+      const resizedWidth = Math.max(720, Math.round(width * scale));
+      const resizedHeight = Math.max(540, Math.round(height * scale));
+
+      return image.resize({ width: resizedWidth, height: resizedHeight });
+    } catch (error) {
+      logger.warn('Failed to resize screenshot for analysis', { error: error.message });
+      return image;
+    }
+  }
+
+  compressForAnalysis(image) {
+    try {
+      const buffer = image.toJPEG(85);
+      return { buffer, mimeType: 'image/jpeg' };
+    } catch (error) {
+      logger.warn('JPEG compression failed, falling back to PNG', { error: error.message });
+      const buffer = image.toPNG();
+      return { buffer, mimeType: 'image/png' };
+    }
   }
 
   _getTargetDisplay(displayId) {

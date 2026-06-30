@@ -1,4 +1,4 @@
-const { BrowserWindow, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const logger = require('../core/logger').createServiceLogger('WINDOW');
 const config = require('../core/config');
@@ -797,8 +797,8 @@ class WindowManager {
           isVisible: win.isVisible()
         });
 
-        win.show();
-        win.focus();
+        win.showInactive();
+        if (app.dock) app.dock.hide();
         setMacOSAlwaysOnTop();
 
         logger.info('Window shown', {
@@ -821,8 +821,7 @@ class WindowManager {
       // Linux/Windows
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       win.setAlwaysOnTop(true);
-      win.show();
-      win.focus();
+      win.showInactive();
       setTimeout(() => {
         if (win.isDestroyed()) return;
         if (!isLLM) {
@@ -989,10 +988,7 @@ class WindowManager {
     });
     
     this.isVisible = true;
-    const activeWindow = this.windows.get(this.activeWindow);
-    if (activeWindow) {
-      activeWindow.focus();
-    }
+    if (app.dock) app.dock.hide();
     
     logger.info('All windows shown on current desktop', { 
       activeWindow: this.activeWindow,
